@@ -1,0 +1,214 @@
+#!/usr/bin/env ruby
+
+# Steps:
+#  - download and store original photos and their "640x" versions
+#  - download and store contents of `flickr.photos.getInfo` as a JSON file
+#  - generate a photostream, dynamically, using sinatra
+
+require 'clive/output'
+require 'fileutils'
+require 'flickraw'
+require 'json'
+require 'open-uri'
+require 'pathname'
+
+HERE = Pathname.new(__FILE__) + '..'
+
+class FlickRaw::Response
+  # The built in #to_hash method doesn't do this deep stuff!
+  def to_h
+    h = to_hash.map {|k,v|
+      if v.respond_to?(:to_h)
+        [k, v.to_h]
+      else
+        [k, v]
+      end
+    }
+    Hash[h]
+  end
+end
+
+module Helper extend self
+  # Runs the standard authenticartion flow. This involves printing a url and
+  # waiting for the number given by it. When we have the tokens, we save them to
+  # a local file so that they can be read, which saves having to authenticate
+  # properly every time. Though it probably is not great for security...
+  def run_authentication_flow
+    token = flickr.get_request_token
+    auth_url = flickr.get_authorize_url(token['oauth_token'])
+
+    puts "Open this url in your process to complete the authication process : #{auth_url}"
+    puts "Copy here the number given when you complete the process."
+    verify = gets.strip
+
+    begin
+      flickr.get_access_token(token['oauth_token'], token['oauth_token_secret'], verify)
+      login = flickr.test.login
+      puts "You are now authenticated as #{login.username} with token #{flickr.access_token} and secret #{flickr.access_secret}"
+      File.write('_auth', "#{flickr.access_token}\n#{flickr.access_secret}")
+
+    rescue FlickRaw::FailedResponse => e
+      puts "Authentication failed : #{e.msg}"
+      exit
+    end
+  end
+
+  # If we've already been authenticated, use those details, otherwise get some
+  # new ones.
+  def authenticate
+    if File.exist?(HERE + '_auth')
+      details = File.read(HERE + '_auth').split("\n")
+
+      flickr.access_token = details[0]
+      flickr.access_secret = details[1]
+    end
+
+    run_authentication_flow unless login
+  end
+
+  def test_login
+    if login
+      puts "You are authenticated as #{login.username}"
+    else
+      puts "You are not authenticated"
+    end
+  end
+
+  def login
+    @login ||= flickr.test.login
+  rescue FlickRaw::OAuthClient::FailedResponse
+    false
+  end
+
+  def photo_path(info)
+    HERE + "photos/#{login.id}/#{info['id']}"
+  end
+end
+
+class Writer
+  def initialize(root)
+    @root = Pathname.new(File.expand_path(root))
+  end
+
+  def original(info)
+    url = FlickRaw.url_o(info)
+    open(url) {|f|
+      write info, "photo_o.#{info.originalformat}", f.read
+    }
+  end
+
+  def thumbnail(info)
+    url = FlickRaw.url_z(info)
+    open(url) {|f|
+      write info, "photo_z.jpg", f.read
+    }
+  end
+
+  def info(info)
+    data = JSON.pretty_generate(info.to_h)
+    write info, "data.json", data
+  end
+
+  private
+
+  def write(info, path, content)
+    local = Helper.photo_path(info) + path
+    FileUtils.mkdir_p(File.dirname(local))
+    File.write(@root + local, content)
+  end
+end
+
+# Photos is a dumb iterator that yields basic information for each photo
+# belonging to the authenticated user.
+class Photos
+  include Enumerable
+
+  # Max. allowed by Flickr
+  PER_PAGE = 500
+
+  def initialize
+    @photos = []
+    @page   = 0
+    @done   = false
+  end
+
+  def each
+    pointer = 0
+    while !done?
+      photo = get(pointer)
+      break if photo == nil
+      yield photo
+      pointer += 1
+    end
+  end
+
+  private
+
+  def done?; @done; end
+
+  def get(index)
+    get_next_page while !done? && @photos.length <= index
+    @photos[index]
+  end
+
+  def get_next_page
+    return [] if done?
+    puts "Downloading page..."
+
+    @page += 1
+    opts = {
+      :user_id  => 'me',
+      :per_page => PER_PAGE,
+      :page     => @page
+    }
+    photos = flickr.people.getPhotos(opts).to_a
+    @done = true if photos.empty?
+    @photos += photos
+  end
+end
+
+FlickRaw.api_key = ENV['FLICKR_KEY']
+FlickRaw.shared_secret = ENV['FLICKR_SECRET']
+
+Helper.authenticate
+Helper.test_login
+
+write = Writer.new(".")
+
+Photos.new.each do |photo|
+  begin
+    path = Helper.photo_path(photo)
+
+    # Skip if already written. This assumes no changes have occured which may be
+    # stupid!
+    if Dir.exist?(path)
+      puts "#{path}  skipping".grey
+      next
+    end
+
+    info = flickr.photos.getInfo(:photo_id => photo['id'])
+
+    # If you CTRL+C half way through downloading a photo, delete everything in the
+    # folder, it can be downloaded later
+    trap("INT") {
+      puts "Removing partially written #{path}".red
+      FileUtils.remove_dir(path)
+      exit 2
+    }
+
+    puts path.to_s.blue.bold
+    write.info info
+    puts "  wrote ".grey + "data.json"
+    write.thumbnail info
+    puts "  wrote ".grey + "thumbnail"
+    write.original info
+    puts "  wrote ".grey + "original"
+
+  rescue Exception => err
+    puts "Error"
+    p photo
+    raise err
+  end
+end
+
+puts "Done!".green

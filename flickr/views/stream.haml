@@ -1,0 +1,18 @@
+!!!
+%html
+  %head
+    %title= "#{@user.name}'s Photostream"
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %h1= "#{@user.name}'s photostream"
+
+    - for photo in @photos
+      .photo
+        %a{href: photo.link}
+          %img{src: photo.thumbnail_url}
+        %h4= photo.title
+        %div.meta
+          :markdown
+            Uploaded on
+            [#{Time.at(photo.dateuploaded.to_i).strftime("%b %-d, %Y")}](#{photo.link})
