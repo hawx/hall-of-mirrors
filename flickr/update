@@ -113,7 +113,7 @@ class Writer
 
   def write(info, path, content)
     local = Helper.photo_path(info) + path
-    FileUtils.mkdir_p(File.dirname(local))
+    FileUtils.mkdir_p(File.dirname(@root + local))
     File.write(@root + local, content)
   end
 end
