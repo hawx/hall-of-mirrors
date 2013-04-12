@@ -1,4 +1,11 @@
-flickr/_auth
-flickr/photos
+# First, blacklist everything
+*
 
-tumblr/tmblr.hawx.me
+# Now whitelist anything that's a directory
+!*/
+
+# And finally whitelist the files
+!*/init
+!*/update
+!*/serve
+!*/app/**/*
