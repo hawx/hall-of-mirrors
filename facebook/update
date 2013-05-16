@@ -1,0 +1,296 @@
+#!/usr/bin/env ruby
+
+gem 'json', '~> 1.7.7'
+
+require 'set'
+require 'mini_exiftool'
+require 'fileutils'
+require 'pathname'
+require 'koala'
+require 'json'
+require 'pp'
+require 'open-uri'
+require 'clive/output'
+
+HERE = Pathname.new(__FILE__) + '..'
+
+class Photo
+  attr_reader :data
+
+  def initialize(album, data)
+    @album = album
+    @data = data
+  end
+
+  def id
+    @data["id"]
+  end
+
+  def source
+    @data["source"]
+  end
+
+  def thumb
+    @data["images"].map {|hsh| hsh["source"] }.find {|s| s[-5..-1] == "a.jpg" }
+  end
+
+  def size
+    [@data["height"], @data["width"]]
+  end
+
+  def created
+    @data["created_time"]
+  end
+
+  def path
+    @album.path + "/#{id}"
+  end
+
+  def write(root)
+    local = root + path
+    FileUtils.mkdir_p(local)
+
+    unless File.exist?(local + 'data.json')
+      File.write(local + 'data.json', JSON.pretty_generate(@data))
+      puts "    wrote ".grey + "#{id}/data.json"
+    end
+
+    unless File.exist?(local + 'photo.jpg')
+      open(source) {|f|
+        File.write(local + 'photo.jpg', f.read)
+      }
+      photo = MiniExiftool.new (local + 'photo.jpg').to_s
+      photo['DateTimeOriginal'] = created.split("T").join(" ")
+      photo.save
+      puts "    wrote ".grey + "#{id}/photo.jpg"
+    end
+
+    unless File.exist?(local + 'thumb.jpg')
+      open(thumb) {|f|
+        File.write(local + 'thumb.jpg', f.read)
+      }
+      puts "    wrote ".grey + "#{id}/thumb.jpg"
+    end
+  end
+end
+
+class Album
+  def self.for(id)
+    GRAPH.get_object("#{id}/albums").map {|a| Album.new(a) }
+  end
+
+  def self.with_id(id)
+    Album.new GRAPH.get_object(id)
+  end
+
+  attr_reader :data
+
+  def initialize(data)
+    @data = data
+  end
+
+  def from
+    @data['from']['id']
+  end
+
+  def id
+    @data["id"]
+  end
+
+  def size
+    @data["count"]
+  end
+
+  def name
+    @data["name"]
+  end
+
+  def path
+    from + "/photos/" + id
+  end
+
+  # Filter out photos taken in Clubs, etc. because I don't really want 1000s of
+  # photos of random people.
+  def ignore?
+    cat = @data['from']['category']
+
+    cat == "Club" || cat == "Arts/entertainment/nightlife"
+  end
+
+  def photos
+    return [] if ignore?
+
+    photos = GRAPH.get_object(id + "?fields=photos.limit(200)")
+    return [] unless photos['photos']
+
+    photos = photos["photos"]["data"]
+    if photos.size != size
+      warn "Could not retrieve all photos, got #{photos.size}/#{size}"
+    end
+    photos.map {|p| Photo.new(self, p) }
+  end
+
+  def write(root)
+    return if ignore?
+
+    FileUtils.mkdir_p(root + path)
+    puts "  " + path.to_s.blue.bold
+    unless File.exist?(root + path + 'data.json')
+      File.write(root + path + 'data.json', JSON.pretty_generate(@data))
+      puts "    wrote ".grey + "data.json"
+    end
+    return unless photos
+    photos.each do |photo|
+      photo.write(root)
+    end
+  end
+
+  def inspect
+    "#<Album #{name}>"
+  end
+end
+
+class User
+  def self.me
+    User.new GRAPH.get_object('me')['id']
+  end
+
+  attr_reader :id
+
+  def initialize(id)
+    @id = id
+  end
+
+  def albums
+    @albums ||= Album.for(@id)
+  end
+
+  def connected_people
+    return @connected_people if @connected_people
+
+    people = Set.new
+
+    albums.each do |album|
+      if album.data['comments']
+        people += album.data['comments']['data'].map {|data|
+          data['from']['id']
+        }
+      end
+
+      if album.data['likes']
+        people += album.data['likes']['data'].map {|data|
+          data['id']
+        }
+      end
+    end
+
+    @connected_people = people.delete(@id).map {|id| User.new(id) }
+  end
+
+  def connected_albums
+    return @connected_albums if @connected_albums
+
+    albums = Set.new
+
+    photos_of.each_slice(50) do |photos|
+      albums += GRAPH.batch do |batch_api|
+        photos.each do |photo|
+          batch_api.get_object(photo.id + '?fields=album') {|r|
+            r['album']['id'] if r['album']
+          }
+        end
+      end
+    end
+
+    @connected_albums = albums.reject(&:nil?).map {|id| Album.with_id(id) }
+  end
+
+  def photos_of
+    return @photos_of if @photos_of
+
+    # Make a dummy album
+    album = Object.new
+    def album.path; 'photos_of'; end
+
+    # Get first page
+    raw = GRAPH.get_object(@id + '?fields=photos.limit(200)')
+    current_page = Koala::Facebook::API::GraphCollection.new(raw['photos'], GRAPH)
+    photo_datas = []
+
+    # Add the first lot
+    photo_datas += current_page.raw_response['data']
+
+    # Get the rest
+    while current_page.next_page_params
+      current_page = current_page.next_page
+
+      photo_datas += current_page.raw_response['data']
+    end
+
+    @photos_of = photo_datas.map {|data| Photo.new(album, data) }
+  end
+
+  def data
+    @data ||= GRAPH.get_object(@id)
+  end
+
+  def name
+    data['name']
+  end
+
+  def write(local)
+    puts @id.blue.bold
+
+    FileUtils.mkdir_p(local + @id)
+    unless File.exist?(local + @id + 'data.json')
+      File.write(local + @id + 'data.json', JSON.pretty_generate(data))
+      puts "  wrote ".grey + "data.json"
+    end
+
+    albums.each do |album|
+      album.write(local)
+    end
+  end
+
+  def inspect
+    "#<User #{name}>"
+  end
+end
+
+
+unless File.exist?(HERE + '_auth')
+  puts "You must run facebook/init to authenticate first!"
+  exit 2
+end
+
+token = File.read(HERE + '_auth')
+
+GRAPH = Koala::Facebook::API.new(token)
+
+me = User.me
+
+puts "Photos of me".blue.bold
+me.photos_of.each do |photo|
+  photo.write(HERE + me.id)
+end
+
+me.write(HERE)
+
+me.connected_people.each {|person|
+  person.write(HERE)
+}
+
+me.connected_albums.each {|album|
+  unless album.ignore?
+    # Get the data, because if they aren't a "connected people" their data won't
+    # have been pulled.
+    FileUtils.mkdir_p(HERE + album.from)
+    unless File.exist?(HERE + album.from + 'data.json')
+      data = GRAPH.get_object(album.from)
+      File.write(HERE + album.from + 'data.json', JSON.pretty_generate(data))
+      puts "  wrote ".grey + album.from + "/data.json"
+    end
+
+    album.write(HERE)
+  end
+}
