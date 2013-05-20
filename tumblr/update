@@ -1,0 +1,83 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+require 'pathname'
+require 'json'
+require 'clive/output'
+require 'tumblr_client'
+require 'seq/paged'
+
+HERE = Pathname.new(__FILE__) + '..'
+
+Tumblr.configure do |config|
+  config.consumer_key        = ENV['TUMBLR_CONSUMER_KEY']
+  config.consumer_secret     = ENV['TUMBLR_CONSUMER_SECRET']
+
+  # Need to use an _auth file like flickr!
+  config.oauth_token         = "bB8tceY9hMBzvsn9E38qb6c0QoZBp8w0tblFVm9DeN8i3vihwM"
+  config.oauth_token_secret  = "itKKT3F5HKhlGCnKXsHjA0II2Q9hYERTARws57fhXSVOV5i14I"
+end
+
+class Post
+  def initialize(blog, hash)
+    @blog = blog
+    @hash = hash
+  end
+
+  def to_json
+    JSON.pretty_generate(@hash)
+  end
+
+  def id
+    @hash['id']
+  end
+
+  def path
+    HERE + @blog + 'posts' + id.to_s
+  end
+
+  def write
+    FileUtils.mkdir_p(path)
+    File.write(path + 'data.json', to_json)
+  end
+end
+
+Posts = lambda do |client, blog|
+  Seq::Paged.new do |page|
+    opts = {
+      limit: 20,
+      offset: page * 20
+    }
+
+    client.posts(blog, opts)['posts'].map {|post| Post.new(blog, post) }
+  end
+end
+
+
+client = Tumblr::Client.new
+blog   = ARGV[0]
+
+posts_full = client.posts(blog)
+blog_info  = posts_full['blog']
+posts = Posts.call(client, blog)
+
+posts.each_with_index do |post|
+  break unless post
+
+  if Dir.exist?(post.path.to_s)
+    puts "#{post.path.to_s}  skipping".grey
+    next
+  end
+
+  trap("INT") {
+    puts "Removing partially written #{post.path.to_s}".red
+    FileUtils.remove_dir(post.path.to_s)
+    exit 2
+  }
+
+  puts post.path.to_s.blue.bold
+  puts "  wrote ".grey + "data.json"
+  post.write
+end
+
+puts "Done!".green

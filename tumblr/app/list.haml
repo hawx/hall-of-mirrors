@@ -1,0 +1,119 @@
+!!!
+%html
+  %head
+    %link{rel: 'stylesheet', href: '/styles.css'}
+
+  %body
+
+    // %header
+    //   %h1
+    //     %a{href: @user.url} Name goes here
+
+    %section#main
+
+      - for post in @posts
+        %article{class: post.data['type']}
+          - case post.data['type']
+
+          - when 'text'
+            - if post.data['title']
+              %header
+                %h1= post.data['title']
+
+            .content= post.data['body']
+
+
+          - when 'photo'
+            %a{href: post.data['image_permalink']}
+              %img{src: post.data['photos'].first['original_size']['url'], alt: post.data['photos'].first['caption']}
+
+            %hr.clear
+
+            - unless post.data['caption'].empty?
+              .caption= post.data['caption']
+
+
+          - when 'video'
+            .video-container= post.data['player'].last['embed_code']
+
+            %hr.clear
+
+            - unless post.data['caption'].empty?
+              .caption= post.data['caption']
+
+
+          - when 'audio'
+            .player.embed= post.data['embed']
+
+            // - if post.data['album_art']
+            //  .artwork
+            //    .mask
+            //    %img{src: post.data['album_art']}
+
+            // %header
+            //  %h1
+            //    - if post.data['track_name']
+            //      %strong= post.data['track_name']
+            //    - if post.data['artist']
+            //      %span= post.data['artist']
+
+            //  .player= post.data['embed']
+
+            - unless post.data['caption'].empty?
+              .caption= post.data['caption']
+
+
+          - when 'quote'
+            %blockquote= post.data['text']
+            - if post.data['source']
+              %cite= post.data['source']
+
+
+          - when 'chat'
+            - if post.data['title']
+              %header
+                %h1= post.data['title']
+
+            %ul.content
+              - for line in post.data['dialogue']
+                %li
+                  %span{class: post.data['name']}= line['label']
+                  %span= line['phrase']
+
+
+          - when 'link'
+            %header
+              %h1
+                %a{href: post.data['url']}= post.data['title']
+
+            - unless post.data['description'].empty?
+              .content= post.data['description']
+
+          .meta
+            %span Posted on
+            %a{href: post.url}= format_time post.data['date']
+            - case post.data['note_count']
+            - when 0
+            - when 1
+              %span with
+              %a{href: post.url}= post.data['note_count'].to_s + ' note'
+            - else
+              %span with
+              %a{href: post.url}= post.data['note_count'].to_s + ' notes'
+
+      %nav
+        - if @page > 0
+          %a.prev{href: @user.url + "/page/#{@page - 1}"} Newer
+        - else
+          %span.prev Newer
+
+        - for page in @user.range
+          - if page
+            %a{href: @user.url + "/page/#{page}"}= page
+          - else
+            %span &hellip;
+
+        - if @page < @user.pages - 1
+          %a.next{href: @user.url + "/page/#{@page + 1}"} Older
+        - else
+          %span.next Older
