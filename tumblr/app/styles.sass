@@ -1,46 +1,47 @@
 body
+  font: 13px/1.4 'Lucida Grande', Verdana, sans-serif
+  background: white
+  color: #1e1e1e
+  padding: 0 4em
   margin: 0
-  font: 16px/1.4em "Signika Negative", "Lucida Grande", Verdana, sans-serif
-  color: #b3204d
-  background: #151101
-  text-shadow: 0 1px 3px black
-  -webkit-font-smoothing: antialiased
 
 section#main
+  max-width: 500px
   width: auto
-  margin: 5em
-  padding-bottom: 5em
-  min-width: 18em
+  padding-bottom: 3em
 
 body > header
-  margin: 7em 5em 0em
+  font-family: HelveticaNeue
+  margin-bottom: 3em
 
   h1
-    display: inline-block
-    font-size: 2.2em
+    font-weight: normal
+    font-size: 21px
+    display: block
 
-    a:hover
-      text-decoration: none
+    span
+      color: #bbb
+
+    a:last-child
+      font-weight: bold
 
 article
-  margin: 4.2em 0
+  border-bottom: 1px dotted #ececec
+  margin: 5em 0 4em
   padding-bottom: 1em
   position: relative
   width: auto
 
-  header h1
-    font-size: 1.55em
-    margin: 1em 0
-    color: #e15882
-    line-height: 1.3em
+  &:last-of-type
+    border-bottom: none
 
-  .content, .caption, .meta, cite, .answer, .question, header
-    max-width: 34em
-    width: auto
+  header h1
+    font-size: 1.6em
+    margin: 1em 0
 
   &.answer
     .answer, .question h1
-      font: 16px/1.4em "Signika Negative", "Lucida Grande", Verdana, sans-serif
+      font: 13px/1.4 'Lucida Grande', Verdana, sans-serif
       padding: 0
       margin: 0
 
@@ -48,14 +49,11 @@ article
       font-weight: bold
 
     .answer
-      margin: 0
+      margin: 0 2em
 
   &.audio
     img
       width: 140px
-
-    .embed iframe
-      background: white
 
     header
       max-width: 340px
@@ -81,6 +79,9 @@ article
       margin: 0 auto
       float: left
 
+      & + img
+        margin-top: 3px
+
   &.video
     video
       max-width: 100%
@@ -100,21 +101,28 @@ article
         span
           font-weight: bold
 
-          &.me
-            color: #d1c089
-
   &.link
-    header h1 a:hover
-      text-decoration: none
+    header h1 a
+      color: #1e1e1e
+      transition: color .2s
+
+      &:hover
+        color: #0a0a0a
+
+      &:before
+        position: absolute
+        margin-left: -30px
+        width: 23px
+        text-align: right
+        content: '→ '
 
   &.quote
     blockquote
-      margin: 1em 1.4em
+      font: italic 1.4em/1.5 Georgia, serif
+      margin: 1em 2em
       padding: 0
       font-size: 1.3em
       line-height: 1.4em
-      color: #e15882
-      max-width: 23.354em
 
       &:before
         content: "“"
@@ -130,90 +138,79 @@ article
 
 #notes ol
   list-style: none
-  padding: 0
-  font-size: 0.77em
-  max-width: 44.156em
-  color: #412e28
-
-  img
-    display: none
+  padding: 0 2em
+  font-size: 11px
+  color: #b1b1b1
 
   a
-    color: #655240
-    margin: 0 0.1em
-
-    &:hover
-      color: #d1c089
-      text-decoration: none
+    color: #939393
+    font-weight: bold
 
   blockquote
+    color: #b1b1b1
     font-weight: normal
-    padding-left: 1.818em
-    margin: 0
-
-    a
-      color: #412e28
-
-      &:hover
-        text-decoration: none
-        color: #412e28
+    margin: 0.2em 1em
+    font-style: italic
 
 .meta
-  height: 1.4em
-  color: #412e28
-  font-size: 0.77em
+  height: 1.5em
+  font-size: 11px
 
   a
-    color: #655240
-    margin: 0 0.1em
+    color: #b1b1b1
+    transition: color .3s
 
     &:hover
-      color: #d1c089
+      color: #939393
       text-decoration: none
 
+  time
+    float: right
+
 nav
-  margin: 1.4em 0
+  margin: 1em 0
   max-width: 500px
   width: 100%
   text-align: center
+  color: #b1b1b1
 
   a
     margin: 0 .3em
     text-decoration: none
     font-weight: bold
 
+    &:hover
+      text-decoration: none
+
   .prev, .next
     margin: 0 2em
 
-  span
-    color: #bbb
+  .current
+    color: #6b6cb8
 
 footer
-  color: #412e28
-  font-size: 0.77em
+  color: #b1b1b1
+  font-size: 11px
   clear: both
   padding: 2.8em 0
 
   a
-    color: #655240
     margin: 0 0.1em
 
     &:hover
-      color: #d1c089
       text-decoration: none
 
 a
   text-decoration: none
-  color: #d1c089
-  -webkit-transition: 0.2s color
+  color: #7576c2
+  transition: 0.2s color
 
   &:hover
-    color: #edf6ee
+    color: #6b6cb8
     text-decoration: underline
 
 .content, .caption
   h1, h2, h3
-    color: #e15882
     margin-top: 1.3em
 
   h1
@@ -226,7 +223,7 @@ a
     font-size: 1.1em
 
   blockquote
-    border-left: 0.3em solid #412e28
+    border-left: 0.3em solid #b1b1b1
 
   p, blockquote, ul, ol
     margin: 1.4em 0
@@ -240,29 +237,9 @@ a
       margin-bottom: 0
 
   pre
-    overflow-x: auto
-    color: #e15882
     width: auto
     padding: 0 1.4em
     max-width: 100%
-
-    &::-webkit-scrollbar
-      width: 8px
-      height: 8px
-
-    &::-webkit-scrollbar-track
-      background: black
-      border-radius: 1em
-      margin: 0.5em
-
-    &::-webkit-scrollbar-thumb
-      background: rgba(209, 192, 137, 0.2)
-      border-radius: 1em
-      border: 1px solid black
-      -webkit-transition: background 0.2s
-
-    &:hover::-webkit-scrollbar-thumb
-      background: rgba(237, 246, 238, 0.2)
 
   code
     font: 0.9em/1.3em Menlo, "Bitstream Vera Sans Mono", "Lucida Console", monospace
@@ -273,22 +250,3 @@ a
 hr.clear
   border-color: transparent
   width: 100%
-
-@media all and (min-width: 68em)
-  body
-    font-size: 17px
-
-@media all and (max-width: 44em)
-  #main
-    margin: 4em
-
-@media all and (max-width: 34em)
-  #main
-    margin: 3em
-
-  .content pre
-    padding: 0
-
-@media all and (max-width: 24em)
-  #main
-    margin: 1.4em
