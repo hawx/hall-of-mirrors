@@ -1,0 +1,25 @@
+!!!
+%html
+  %head
+    %title= title @user, "set", @set
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a{href: '/'} flickr
+        %span /
+        %a{href: @user.url}= @user.data['username']
+        %span /
+        %a{href: @user.url + '/sets'} sets
+        %span /
+        %a{href: @set.url}= @set.data['title']
+
+      %p= @set.data['description']
+
+    - for photo in @set.photos
+      .photo
+        %a{href: photo.url}
+          %img{src: photo.thumbnail_url}
+        %h4= photo.title
+        %div.meta= meta @user, photo

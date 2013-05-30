@@ -1,0 +1,38 @@
+!!!
+%html
+  %head
+    %title= title @user
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a{href: '/'} flickr
+        %span /
+        %a{href: @user.url}= @user.data['username']
+
+    - for photo in @photos
+      .photo
+        %a{href: photo.url}
+          %img{src: photo.thumbnail_url}
+        %h4= photo.title
+        %div.meta= meta @user, photo
+
+    .nav
+      - if @page > 0
+        %a.prev{href: @user.url_for_page(@page-1)} &larr; prev
+      - else
+        %a.prev.disabled &larr; prev
+
+      - for page in @user.range
+        - if page == @page
+          %span.this-page= page
+        - elsif page
+          %a{href: @user.url_for_page(page)}= page
+        - else
+          %span &hellip;
+
+      - if @page < @user.page_count
+        %a.next{href: @user.url_for_page(@page+1)} next &rarr;
+      - else
+        %a.next.disabled next &rarr;

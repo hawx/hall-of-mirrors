@@ -1,0 +1,114 @@
+body
+  background: white
+  color: black
+  font-family: 'Helvetica Neue', Helvetica, 'Lucida Grande', sans-serif
+  font-size: 14px
+  padding: 2em
+
+h1
+  margin: 2em 0
+  font-size: 26px
+  font-weight: normal
+
+  a
+    color: #000
+    text-decoration: none
+
+    &:last-child
+      font-weight: bold
+
+  span
+    color: #bbb
+
+.photo
+  margin: 3em 0
+
+  h4
+    font-size: 14px
+    margin: 5px 0 0
+
+  .meta
+    font-size: 11px
+    color: rgb(153, 153, 153)
+    margin: 0
+    margin-top: .5em
+    line-height: 12px
+
+  p
+    margin: 5px 0 2px
+
+  a
+    color: #0063dc
+    text-decoration: none
+
+.photo.display
+  width: 700px
+  margin-right: -700px
+  float: left
+
+.photo-nav
+  float: left
+  margin-left: 700px
+  top: 3em
+  position: relative
+
+  #map
+    width: 140px
+    height: 140px
+    background: #eee
+    margin-bottom: 12px
+
+    &:before
+      content: 'no map'
+      width: 140px
+      margin-top: 60px
+      text-align: center
+      display: inline-block
+      color: #ccc
+      text-shadow: 0 -1px 0 #f5f5f5
+
+  .prev, .next
+    width: 140px
+    display: block
+    margin-bottom: 2px
+
+    img
+      max-width: 100%
+      max-height: 100%
+
+  .tags
+    margin-top: 12px
+    list-style: none
+    padding: 0
+    width: 140px
+
+    li
+      float: left
+
+      &:after
+        margin: 0 .6em
+        content: '•'
+        color: #bbb
+
+      &:last-child:after
+        content: ''
+
+.nav
+  a
+    padding: 2px 6px
+    color: #0063dc
+    text-decoration: none
+
+  .this-page
+    font-weight: bold
+    color: #ff0084
+    padding: 2px 6px
+
+  .prev
+    margin-right: 20px
+
+  .next
+    margin-left: 20px
+
+  .disabled
+    color: #bbb

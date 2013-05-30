@@ -1,0 +1,56 @@
+!!!
+%html
+  %head
+    %title= title @user, @photo
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a{href: '/'} flickr
+        %span /
+        %a{href: @user.url}= @user.data['username']
+        %span /
+        - unless @photo.title.empty?
+          %a{href: @photo.url}= @photo.title
+        - else
+          %span __________
+
+    .photo.display
+      %a{href: @photo.original_url}
+        %img{src: @photo.thumbnail_url}
+
+      %div.meta= meta @user, @photo
+
+      %p= @photo.description
+
+    .photo-nav
+      #map
+
+      - if @photo.prev
+        %a.prev{href: @photo.prev.url}
+          %img{src: @photo.prev.thumbnail_url}
+
+      - if @photo.next
+        %a.next{href: @photo.next.url}
+          %img{src: @photo.next.thumbnail_url}
+
+
+      %ul.tags
+        - for tag in @photo.tags['tag']
+          %li= tag
+
+    - if @photo.data['location']
+      %script{src: '/app/modestmaps.min.js'}
+      :javascript
+        function init() {
+          var template = 'http://c.tiles.mapbox.com/v3/examples.map-szwdot65/{Z}/{X}/{Y}.png';
+          var provider = new MM.TemplatedLayer(template);
+          var map = new MM.Map('map', provider, null, null);
+          map.setZoom(13).setCenter({
+            lat: #{@photo.location['latitude']},
+            lon: #{@photo.location['longitude']}
+          });
+        }
+
+        window.onload = init

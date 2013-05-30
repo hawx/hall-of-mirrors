@@ -1,0 +1,24 @@
+!!!
+%html
+  %head
+    %title= title @user, 'tags', @tag
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a{href: '/'} flickr
+        %span /
+        %a{href: @user.url}= @user.data['username']
+        %span /
+        %a{href: @user.url + '/tags'} tags
+        %span /
+        %a{href: @tag.url}= @tag.name
+
+
+    - for photo in @tag.photos.take(50)
+      .photo
+        %a{href: photo.url}
+          %img{src: photo.thumbnail_url}
+        %h4= photo.title
+        %div.meta= meta @user, photo

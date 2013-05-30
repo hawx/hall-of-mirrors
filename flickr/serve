@@ -1,36 +1,72 @@
 #!/usr/bin/env ruby
 
-require 'sass'
+gem 'sass'; require 'sass'
 require 'haml'
 require 'json'
+require 'time'
 require 'maruku'
 require 'sinatra'
+require 'seq/pager'
 
+PAGE_SIZE = 10
 HERE = Pathname.new(__FILE__) + '..'
 set :public_folder, File.dirname(__FILE__)
+set :views, File.dirname(__FILE__) + '/app'
 
-class Photo
+module F; end
+
+class F::Photo
   attr_reader :id
 
-  def initialize(root, id)
-    @root = root
-    @id = id
+  def initialize(user, id)
+    @user  = user
+    @id    = id
   end
 
-  def link
-    "/#@root/#@id"
+  def name
+    data['title']
+  end
+
+  def sort_date
+    Time.at(data["dateuploaded"].to_i)
+  end
+
+  def index
+    @user.index_of(self)
+  end
+
+  def prev
+    @prev ||= begin
+                return if index <= 0
+                @user.find_by_index(index - 1)
+              end
+  end
+
+  def next
+    @next ||= begin
+                return if index >= @user.photos.size - 1
+                @user.find_by_index(index + 1)
+              end
+  end
+
+  def path
+    @user.path + 'photos' + @id.to_s
+  end
+
+  def url
+    @user.url + "/#{id}"
   end
 
   def original_url
-    "/" + Dir[HERE + "#@root/#@id/photo_o.*"].first.gsub(/\A#{HERE.to_s}\//, '')
+    '/' + Pathname.glob(path + 'photo_o.*').first.relative_path_from(HERE).to_s
   end
 
   def thumbnail_url
-    "/" + Dir[HERE + "#@root/#@id/photo_z.*"].first.gsub(/\A#{HERE.to_s}\//, '')
+    '/' + path.relative_path_from(HERE).to_s + '/photo_z.jpg'
   end
 
   def data
-    @data ||= JSON.parse(File.read(HERE + "#@root/#@id/data.json"))
+    @data ||= JSON.parse File.read(path + 'data.json')
   end
 
   def method_missing(sym, *args, &block)
@@ -42,40 +78,241 @@ class Photo
   end
 end
 
-class User
-  attr_reader :id, :name
+class F::Set
+  attr_reader :id
 
-  def initialize(id, name)
-    @id, @name = id, name
+  def initialize(user, id)
+    @user = user
+    @id   = id
+  end
+
+  def name
+    data['title']
+  end
+
+  def path
+    @user.path + 'sets' + id.to_s
+  end
+
+  def url
+    @user.url + '/sets/' + id.to_s
+  end
+
+  def photos
+    @photos ||= data['photos'].reverse.map {|ph| @user.photo(ph) }
+  end
+
+  def data
+    @data ||= JSON.parse File.read(path + 'data.json')
+  end
+end
+
+class F::Tag
+  attr_reader :name
+
+  def initialize(user, ids, name)
+    @user = user
+    @ids  = ids
+    @name = name
+  end
+
+  def photos
+    @photos ||= @ids.map {|ph| @user.photo(ph)}
+  end
+
+  def url
+    @user.url + '/tags/' + @name
+  end
+end
+
+class F::User
+  def self.all
+    Dir[HERE + '*@*'].map {|path|
+      new path.split('/').last
+    }
+  end
+
+  # term could be an id (nsid) or path_alias.
+  def self.find(term)
+    all.find {|user|
+      user.data['id'] == term || user.data['path_alias'] == term
+    }
+  end
+
+  attr_reader :id
+
+  def initialize(id)
+    @id = id
+  end
+
+  def name
+    data['username']
+  end
+
+  def path
+    HERE + @id.to_s
+  end
+
+  def data
+    @data ||= JSON.parse File.read(path + 'data.json')
   end
 
   def url
     "/photos/#{id}"
   end
 
+  def url_for_page(num)
+    "/photos/#{id}/page/#{num}"
+  end
+
+  def index_of(photo)
+    photos.index(photo)
+  end
+
+  def find_by_index(index)
+    photos[index]
+  end
+
+  def tags
+    return @tags if @tags
+
+    @tags = Hash.new([])
+    photos.each do |photo|
+      photo.data['tags']['tag'].each do |tag|
+        @tags[tag] += [photo.id]
+      end
+    end
+
+    @tags = @tags.map {|k,v| F::Tag.new(self, v, k) }
+  end
+
+  def sets
+    @sets ||= Dir[path + 'sets' + '*'].map {|dir|
+      F::Set.new(self, dir.split("/").last.to_i)
+    }.compact
+  end
+
   def photos
-    Dir[HERE + "#{url[1..-1]}/*"].reverse.map {|path|
-      Photo.new(url[1..-1], path.split("/").last.to_i)
-    }
+    @photos ||= Dir[path + 'photos' + '*'].map {|path|
+      F::Photo.new(self, path.split("/").last.to_i)
+    }.sort_by(&:sort_date).reverse
+  end
+
+  def __pages
+    @pages ||= Seq::Pager.new(PAGE_SIZE, photos)
+  end
+
+  def page(num)
+    __pages.page = num
+    __pages.curr
+  end
+
+  def page_count
+    __pages.pages
+  end
+
+  def range
+    __pages.range(2, 2, 2)
+      .reject(&:empty?)
+      .map {|a| a << nil }
+      .flatten.tap(&:pop)
   end
 
   def photo(id)
     photos.find {|ph| ph.id == id.to_i }
   end
+
+  def set(id)
+    sets.find {|st| st.id == id.to_i }
+  end
+
+  def tag(name)
+    tags.find {|tg| tg.name == name }
+  end
+
+  def inspect
+    "#<User #@id>"
+  end
 end
 
-get '/photos/:user_id' do
-  @user = User.new(params[:user_id], "hawx~")
-  @photos = @user.photos.take(5)
-  haml :stream
+def time(msg, &block)
+  s = Time.now
+  block.call
+  puts "#{msg}: #{Time.now - s}s"
 end
 
-get '/photos/:user_id/:photo_id' do
-  @user = User.new(params[:user_id], "hawx~")
-  @photo = @user.photo(params[:photo_id])
-  haml :show
+
+helpers do
+  def title(*parts)
+    parts = %w(flickr) + parts.map {|part|
+      part.respond_to?(:name) ? part.name : part
+    }
+    parts.join(" / ")
+  end
+
+  def meta(user, photo)
+    <<EOS
+<span>Uploaded on</span>
+<a href="#{photo.url}">#{Time.at(photo.dateuploaded.to_i).strftime("%b %-d, %Y")}</a>
+<span>by</span>
+<a href="#{user.url}">#{user.data['username']}</a>
+EOS
+  end
 end
+
 
 get '/styles.css' do
   sass :styles
+end
+
+get '/photos/:user_id/?' do
+  @user = F::User.find(params[:user_id])
+  @page = 0
+  @photos = @user.page(@page)
+  haml :photos
+end
+
+get '/photos/:user_id/page/:num/?' do
+  @user = F::User.find(params[:user_id])
+  @page = params[:num].to_i
+
+  redirect "/photos/#{params[:user_id]}" if @page == 0
+
+  @photos = @user.page(@page)
+  haml :photos
+end
+
+get '/photos/:user_id/sets/?' do
+  @user = F::User.find(params[:user_id])
+  @sets = @user.sets
+
+  haml :sets
+end
+
+get '/photos/:user_id/sets/:set_id/?' do
+  @user = F::User.find(params[:user_id])
+  @set  = @user.set(params[:set_id])
+
+  haml :set
+end
+
+get '/photos/:user_id/tags/?' do
+  @user = F::User.find(params[:user_id])
+  @tags = @user.tags
+
+  haml :tags
+end
+
+get '/photos/:user_id/tags/:tag_name/?' do
+  @user = F::User.find(params[:user_id])
+  @tag  = @user.tag(params[:tag_name])
+
+  haml :tag
+end
+
+get '/photos/:user_id/:photo_id/?' do
+  @user = F::User.find(params[:user_id])
+  @photo = @user.photo(params[:photo_id])
+
+  haml :photo
 end

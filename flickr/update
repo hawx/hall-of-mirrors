@@ -5,12 +5,14 @@
 #  - download and store contents of `flickr.photos.getInfo` as a JSON file
 #  - generate a photostream, dynamically, using sinatra
 
-require 'clive/output'
 require 'fileutils'
-require 'flickraw'
 require 'json'
-require 'open-uri'
 require 'pathname'
+require 'open-uri'
+require 'pp'
+require 'clive/output'
+require 'flickraw'
+require 'seq/paged'
 
 HERE = Pathname.new(__FILE__) + '..'
 
@@ -80,8 +82,12 @@ module Helper extend self
     false
   end
 
+  def user_path
+    HERE + login.id.to_s
+  end
+
   def photo_path(info)
-    HERE + "photos/#{login.id}/#{info['id']}"
+    user_path + 'photos' + info['id'].to_s
   end
 end
 
@@ -91,6 +97,8 @@ class Writer
   end
 
   def original(info)
+    p info; p info.originalsecret
+    exit
     url = FlickRaw.url_o(info)
     open(url) {|f|
       write info, "photo_o.#{info.originalformat}", f.read
@@ -118,54 +126,170 @@ class Writer
   end
 end
 
-# Photos is a dumb iterator that yields basic information for each photo
-# belonging to the authenticated user.
-class Photos
-  include Enumerable
-
-  # Max. allowed by Flickr
-  PER_PAGE = 500
-
-  def initialize
-    @photos = []
-    @page   = 0
-    @done   = false
+class Photo
+  def initialize(user, data)
+    @user = user
+    @data = data
   end
 
-  def each
-    pointer = 0
-    while !done?
-      photo = get(pointer)
-      break if photo == nil
-      yield photo
-      pointer += 1
+  def id
+    @data['id'].to_s
+  end
+
+  def data
+    flickr.photos.getInfo(photo_id: id).to_h
+  end
+
+  def to_json
+    JSON.pretty_generate data
+  end
+
+  def path
+    @user.path + "photos" + id
+  end
+
+  def write
+    wrote = false
+    print path.to_s.blue.bold
+    FileUtils.mkdir_p path
+
+    unless (path + 'data.json').exist?
+      File.write(path + 'data.json', to_json)
+      print "\n  wrote ".grey + "data.json"
+      wrote = true
+    end
+
+    unless (path + 'photo_z.jpg').exist?
+      open @data['url_z'] do |f|
+        File.write(path + 'photo_z.jpg', f.read)
+      end
+      print "\n  wrote ".grey + "thumbnail"
+      wrote = true
+    end
+
+    unless Pathname.glob(path + 'photo_o.*').size > 0
+      open @data['url_o'] do |f|
+        File.write(path + "photo_o.#{data['originalformat']}", f.read)
+      end
+      print "\n  wrote ".grey + "original"
+      wrote = true
+    end
+
+    if wrote
+      print "\n\n"
+    else
+      print "\r  skipped ".red + path.to_s.grey + "\n"
+    end
+  end
+end
+
+class Set
+  def initialize(user, data)
+    @user = user
+    @data = data
+  end
+
+  def id
+    @data['id'].to_s
+  end
+
+  def title
+    @data['title']
+  end
+
+  def photos
+    @photos ||= flickr.photosets.getPhotos(photoset_id: id)['photo']
+      .map {|hsh| hsh['id']}
+  end
+
+  def to_json
+    JSON.pretty_generate(@data.to_h.merge(photos: photos))
+  end
+
+  def path
+    @user.path + "sets" + id
+  end
+
+  def write
+    wrote = false
+    print path.to_s.blue.bold
+    FileUtils.mkdir_p(path)
+
+    unless (path + 'data.json').exist?
+      File.write(path + 'data.json', to_json)
+      print "\n  wrote ".grey + 'data.json'
+      wrote = true
+    end
+
+    if wrote
+      print "\n\n"
+    else
+      print "\r  skipped ".red + path.to_s.grey + "\n"
+    end
+  end
+end
+
+class User
+  def initialize(id)
+    @id = id.to_s
+  end
+
+  def path
+    HERE + @id
+  end
+
+  def photos
+    Seq::Paged.new do |page|
+      opts = {
+        user_id:  @id,
+        per_page: 500, # max allowed by flickr
+        page:     page,
+        extras:   'url_z,url_o'
+      }
+
+      flickr.people.getPhotos(opts).to_a.map {|data| Photo.new(self, data) }
     end
   end
 
-  private
+  def sets
+    Seq::Paged.new do |page|
+      opts = {
+        user_id:  @id,
+        per_page: 500,
+        page:     page
+      }
 
-  def done?; @done; end
-
-  def get(index)
-    get_next_page while !done? && @photos.length <= index
-    @photos[index]
+      flickr.photosets.getList(opts).to_a.map {|data| Set.new(self, data) }
+    end
   end
 
-  def get_next_page
-    return [] if done?
-    puts "Downloading page..."
+  def data
+    flickr.people.getInfo(user_id: @id).to_h
+  end
 
-    @page += 1
-    opts = {
-      :user_id  => 'me',
-      :per_page => PER_PAGE,
-      :page     => @page
-    }
-    photos = flickr.people.getPhotos(opts).to_a
-    @done = true if photos.empty?
-    @photos += photos
+  def to_json
+    JSON.pretty_generate data
+  end
+
+  def write
+    wrote = false
+    print path.to_s.blue.bold
+    FileUtils.mkdir_p(path)
+
+    unless (path + 'data.json').exist?
+      File.write(path + 'data.json', to_json)
+      print "\n  wrote ".grey + 'data.json'
+      wrote = true
+    end
+
+    if wrote
+      print "\n\n"
+    else
+      print "\r  skipped ".red + path.to_s.grey + "\n"
+    end
   end
 end
+
 
 FlickRaw.api_key = ENV['FLICKR_KEY']
 FlickRaw.shared_secret = ENV['FLICKR_SECRET']
@@ -173,42 +297,17 @@ FlickRaw.shared_secret = ENV['FLICKR_SECRET']
 Helper.authenticate
 Helper.test_login
 
-write = Writer.new(".")
 
-Photos.new.each do |photo|
-  begin
-    path = Helper.photo_path(photo)
+user = User.new(Helper.login['id'])
 
-    # Skip if already written. This assumes no changes have occured which may be
-    # stupid!
-    if Dir.exist?(path)
-      puts "#{path}  skipping".grey
-      next
-    end
+user.write
 
-    info = flickr.photos.getInfo(:photo_id => photo['id'])
+user.sets.each do |set|
+  set.write if set
+end
 
-    # If you CTRL+C half way through downloading a photo, delete everything in the
-    # folder, it can be downloaded later
-    trap("INT") {
-      puts "Removing partially written #{path}".red
-      FileUtils.remove_dir(path)
-      exit 2
-    }
-
-    puts path.to_s.blue.bold
-    write.info info
-    puts "  wrote ".grey + "data.json"
-    write.thumbnail info
-    puts "  wrote ".grey + "thumbnail"
-    write.original info
-    puts "  wrote ".grey + "original"
-
-  rescue Exception => err
-    puts "Error"
-    p photo
-    raise err
-  end
+user.photos.each do |photo|
+  photo.write if photo
 end
 
 puts "Done!".green
