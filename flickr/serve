@@ -125,6 +125,7 @@ class F::Tag
   end
 end
 
+
 class F::User
   def self.all
     Dir[HERE + '*@*'].map {|path|

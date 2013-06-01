@@ -16,29 +16,32 @@
         - else
           %span __________
 
-    .photo.display
-      %a{href: @photo.original_url}
-        %img{src: @photo.thumbnail_url}
+    %section
+      .left
+        .photo.display
+          %a{href: @photo.original_url}
+            %img{src: @photo.thumbnail_url}
 
-      %div.meta= meta @user, @photo
+          %div.meta= meta @user, @photo
 
-      %p= @photo.description
+          %p= @photo.description
 
-    .photo-nav
-      #map
+      .right
+        #map
 
-      - if @photo.prev
-        %a.prev{href: @photo.prev.url}
-          %img{src: @photo.prev.thumbnail_url}
+        - if @photo.prev
+          %a.prev{href: @photo.prev.url}
+            %img{src: @photo.prev.thumbnail_url}
 
-      - if @photo.next
-        %a.next{href: @photo.next.url}
-          %img{src: @photo.next.thumbnail_url}
+        - if @photo.next
+          %a.next{href: @photo.next.url}
+            %img{src: @photo.next.thumbnail_url}
 
 
-      %ul.tags
-        - for tag in @photo.tags['tag']
-          %li= tag
+        %ul.tags
+          - for tag in @photo.tags['tag']
+            %li
+              %a{href: @user.url + "/tags/" + tag}= tag
 
     - if @photo.data['location']
       %script{src: '/app/modestmaps.min.js'}

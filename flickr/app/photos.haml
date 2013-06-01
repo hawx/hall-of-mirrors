@@ -11,12 +11,24 @@
         %span /
         %a{href: @user.url}= @user.data['username']
 
-    - for photo in @photos
-      .photo
-        %a{href: photo.url}
-          %img{src: photo.thumbnail_url}
-        %h4= photo.title
-        %div.meta= meta @user, photo
+    %section
+      .left
+        - for photo in @photos
+          .photo
+            %a{href: photo.url}
+              %img{src: photo.thumbnail_url}
+            %h4= photo.title
+            %div.meta= meta @user, photo
+
+      .right
+        %h2 Sets
+        - for set in @user.sets
+          .set
+            %a{href: set.url}
+              %img{src: set.photos.first.thumbnail_url}
+              %h2= set.data['title']
+
+      .clear
 
     .nav
       - if @page > 0
