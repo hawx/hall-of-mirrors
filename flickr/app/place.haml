@@ -1,7 +1,7 @@
 !!!
 %html
   %head
-    %title= title @user, 'tags', @tag
+    %title= title @user, "places", @set
     %link{:rel => 'stylesheet', :href => '/styles.css'}
 
   %body
@@ -11,9 +11,9 @@
         %span /
         %a{href: @user.url}= @user.data['username']
         %span /
-        %a{href: @user.url + '/tags'} tags
+        %a{href: @user.url + '/places'} places
         %span /
-        %a.here{href: @tag.url}= @tag.name
+        %a.here{href: @place.url}= @place.name
 
 
     - for photo in @photos
@@ -23,4 +23,4 @@
         %h4= photo.title
         %div.meta= meta @user, photo
 
-    = partial :nav, locals: {obj: @tag, page: @page}
+    = partial :nav, locals: {obj: @place, page: @page}

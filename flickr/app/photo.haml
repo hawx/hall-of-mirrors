@@ -33,7 +33,9 @@
 
           - unless @photo.exif['camera'].empty?
             %ul.exif
-              %li= @photo.exif['camera']
+              %li
+                - cam_url = @photo.exif['camera'].downcase.gsub(' ', '-')
+                %a{href: @user.url + '/cameras/' + cam_url}= @photo.exif['camera']
 
               - if @photo.has_exif?('Aperture')
                 %li= @photo.get_exif('Aperture')['clean']
@@ -63,6 +65,7 @@
             %img{src: @photo.next.thumbnail_url}
 
       .clear.padding
+
 
     - if @photo.data['location']
       %script{src: '/app/modestmaps.min.js'}
