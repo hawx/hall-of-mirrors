@@ -15,6 +15,31 @@ set :views, File.dirname(__FILE__) + '/app'
 
 module F; end
 
+# Requires #photos method to be defined
+module F::Pageable
+  def __pages
+    ivar = self.instance_variable_get(:@__pages)
+    return ivar if ivar
+    self.instance_variable_set(:@__pages, Seq::Pager.new(PAGE_SIZE, photos))
+  end
+
+  def page(num)
+    __pages.page = num
+    __pages.curr
+  end
+
+  def page_count
+    __pages.pages
+  end
+
+  def range
+    __pages.range(2, 2, 2)
+      .reject(&:empty?)
+      .map {|a| a << nil }
+      .flatten.tap(&:pop)
+  end
+end
+
 class F::Photo
   attr_reader :id
 
@@ -81,6 +106,10 @@ class F::Photo
     exif['exif'].find {|t| t['label'] == name || t['tag'] == name }
   end
 
+  def inspect
+    "#<F::Photo #{@id}>"
+  end
+
   def method_missing(sym, *args, &block)
     if data.key?(sym.to_s)
       data[sym.to_s]
@@ -91,6 +120,8 @@ class F::Photo
 end
 
 class F::Set
+  include F::Pageable
+
   attr_reader :id
 
   def initialize(user, id)
@@ -117,9 +148,15 @@ class F::Set
   def data
     @data ||= JSON.parse File.read(path + 'data.json')
   end
+
+  def inspect
+    "#<F::Set #@id>"
+  end
 end
 
 class F::Tag
+  include F::Pageable
+
   attr_reader :name
 
   def initialize(user, ids, name)
@@ -135,10 +172,43 @@ class F::Tag
   def url
     @user.url + '/tags/' + @name
   end
+
+  def inspect
+    "#<F::Tag #@name>"
+  end
 end
 
+class F::Camera
+  include F::Pageable
+
+  attr_reader :name
+
+  def initialize(user, ids, name)
+    @user = user
+    @ids  = ids
+    @name = name
+  end
+
+  def escaped_name
+    @name.downcase.gsub(' ', '-')
+  end
+
+  def photos
+    @photos ||= @ids.map {|ph| @user.photo(ph) }
+  end
+
+  def url
+    @user.url + '/cameras/' + escaped_name
+  end
+
+  def inspect
+    "#<F::Camera #@name>"
+  end
+end
 
 class F::User
+  include F::Pageable
+
   def self.all
     Dir[HERE + '*@*'].map {|path|
       new path.split('/').last
@@ -186,6 +256,24 @@ class F::User
     photos[index]
   end
 
+  def cameras
+    # p user.photos.first.exif['camera']
+    # p user.photos.first.get_exif('Make')
+    # p user.photos.first.get_exif('Model')
+
+    return @cameras if @cameras
+
+    @cameras = Hash.new([])
+    photos.each do |photo|
+      camera = photo.exif['camera']
+      if camera && !camera.empty?
+        @cameras[camera] += [photo.id]
+      end
+    end
+
+    @cameras = @cameras.map {|k,v| F::Camera.new(self, v, k) }
+  end
+
   def tags
     return @tags if @tags
 
@@ -211,28 +299,12 @@ class F::User
     }.sort_by(&:sort_date).reverse
   end
 
-  def __pages
-    @pages ||= Seq::Pager.new(PAGE_SIZE, photos)
-  end
-
-  def page(num)
-    __pages.page = num
-    __pages.curr
-  end
-
-  def page_count
-    __pages.pages
-  end
-
-  def range
-    __pages.range(2, 2, 2)
-      .reject(&:empty?)
-      .map {|a| a << nil }
-      .flatten.tap(&:pop)
-  end
-
   def photo(id)
     photos.find {|ph| ph.id == id.to_i }
+  end
+
+  def camera(name)
+    cameras.find {|ca| ca.escaped_name == name }
   end
 
   def set(id)
@@ -247,6 +319,7 @@ class F::User
     "#<User #@id>"
   end
 end
+
 
 def time(msg, &block)
   s = Time.now
@@ -301,54 +374,93 @@ get '/styles.css' do
   sass :styles
 end
 
-get '/photos/:user_id/?' do
-  @user = F::User.find(params[:user_id])
+get '/photos/:user/?' do
+  @user = F::User.find(params[:user])
   @page = 0
   @photos = @user.page(@page)
   haml :photos
 end
 
-get '/photos/:user_id/page/:num/?' do
-  @user = F::User.find(params[:user_id])
+get '/photos/:user/page/:num/?' do
+  @user = F::User.find(params[:user])
   @page = params[:num].to_i
 
-  redirect "/photos/#{params[:user_id]}" if @page == 0
+  redirect @user.url if @page == 0
 
   @photos = @user.page(@page)
   haml :photos
 end
 
-get '/photos/:user_id/sets/?' do
-  @user = F::User.find(params[:user_id])
+
+get '/photos/:user/cameras/?' do
+  @user = F::User.find(params[:user])
+  @cameras = @user.cameras
+
+  haml :cameras
+end
+
+get '/photos/:user/cameras/:camera/?' do
+  @user   = F::User.find(params[:user])
+  @camera = @user.camera(params[:camera])
+  @page   = 0
+  @photos = @camera.page(@page)
+
+  haml :camera
+end
+
+get '/photos/:user/cameras/:camera/page/:num/?' do
+  @user   = F::User.find(params[:user])
+  @camera = @user.camera(params[:camera])
+  @page   = params[:num].to_i
+  @photos = @camera.page(@page)
+
+  redirect @camera.url if @page == 0
+
+  haml :camera
+end
+
+get '/photos/:user/sets/?' do
+  @user = F::User.find(params[:user])
   @sets = @user.sets
 
   haml :sets
 end
 
-get '/photos/:user_id/sets/:set_id/?' do
-  @user = F::User.find(params[:user_id])
-  @set  = @user.set(params[:set_id])
+get '/photos/:user/sets/:set/?' do
+  @user   = F::User.find(params[:user])
+  @set    = @user.set(params[:set])
+  @page   = 0
+  @photos = @set.page(@page)
 
   haml :set
 end
 
-get '/photos/:user_id/tags/?' do
-  @user = F::User.find(params[:user_id])
+get '/photos/:user/sets/:set/page/:num/?' do
+  @user   = F::User.find(params[:user])
+  @set    = @user.set(params[:set])
+  @page   = params[:num].to_i
+  @photos = @set.page(@page)
+
+  haml :set
+end
+
+get '/photos/:user/tags/?' do
+  @user = F::User.find(params[:user])
   @tags = @user.tags
 
   haml :tags
 end
 
-get '/photos/:user_id/tags/:tag_name/?' do
-  @user = F::User.find(params[:user_id])
-  @tag  = @user.tag(params[:tag_name])
+get '/photos/:user/tags/:tag/?' do
+  @user = F::User.find(params[:user])
+  @tag  = @user.tag(params[:tag])
 
   haml :tag
 end
 
-get '/photos/:user_id/:photo_id/?' do
-  @user = F::User.find(params[:user_id])
-  @photo = @user.photo(params[:photo_id])
+get '/photos/:user/:photo/?' do
+  @user = F::User.find(params[:user])
+  @photo = @user.photo(params[:photo])
 
   haml :photo
 end

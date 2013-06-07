@@ -17,9 +17,11 @@
 
       %p= @set.data['description']
 
-    - for photo in @set.photos
+    - for photo in @photos
       .photo
         %a{href: photo.url}
           %img{src: photo.thumbnail_url}
         %h4= photo.title
         %div.meta= meta @user, photo
+
+    = partial :nav, locals: {obj: @set, page: @page}

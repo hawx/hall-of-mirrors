@@ -1,7 +1,7 @@
 !!!
 %html
   %head
-    %title= title @user
+    %title= title @user, 'cameras', @camera
     %link{:rel => 'stylesheet', :href => '/styles.css'}
 
   %body
@@ -11,15 +11,9 @@
         %span /
         %a{href: @user.url}= @user.data['username']
         %span /
-        .menu
-          %a.here{href: @user.url} photos
-          %a{href: @user.url + '/sets'} sets
-          %a{href: @user.url + '/tags'} tags
-          %span faves
-          %span cameras
-          %span places
-          %span archives
-
+        %a{href: @user.url + '/cameras'} cameras
+        %span /
+        %a.here{href: @camera.url}= @camera.name
 
     %section
       .left
@@ -29,7 +23,6 @@
               %img{src: photo.thumbnail_url}
             %h4= photo.title
             %div.meta= meta @user, photo
-
       .clear
 
-    = partial :nav, locals: {obj: @user, page: @page}
+    = partial :nav, locals: {obj: @camera, page: @page}
