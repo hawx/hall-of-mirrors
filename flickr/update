@@ -182,12 +182,12 @@ class Set
     @user.path + "sets" + id
   end
 
-  def write
+  def write(overwrite={})
     wrote = false
     print path.to_s.blue.bold
     FileUtils.mkdir_p(path)
 
-    unless (path + 'data.json').exist?
+    if !(path + 'data.json').exist? || overwrite[:set]
       File.write(path + 'data.json', to_json)
       print "\n  wrote ".grey + 'data.json'
       wrote = true
@@ -243,12 +243,12 @@ class User
     JSON.pretty_generate data
   end
 
-  def write
+  def write(overwrite={})
     wrote = false
     print path.to_s.blue.bold
     FileUtils.mkdir_p(path)
 
-    unless (path + 'data.json').exist?
+    if !(path + 'data.json').exist? || overwrite[:user]
       File.write(path + 'data.json', to_json)
       print "\n  wrote ".grey + 'data.json'
       wrote = true
@@ -264,6 +264,26 @@ class User
   end
 end
 
+def arg?(name)
+  !!ARGV.delete("--#{name}")
+end
+
+if arg?(:help)
+  puts <<EOS
+Usage: flickr/update [options]
+
+  --quick              # Stop writing photos/sets on first skip
+  --force-info         # Force overwrite of info
+  --force-photo        # Force overwrite of exif data, thumbnail image and
+                       # original image
+  --force-set          # Force overwrite of sets
+  --force-user         # Force overwrite of user data
+  --help               # Display this help message
+
+EOS
+
+  exit
+end
 
 FlickRaw.api_key = ENV['FLICKR_KEY']
 FlickRaw.shared_secret = ENV['FLICKR_SECRET']
@@ -271,20 +291,26 @@ FlickRaw.shared_secret = ENV['FLICKR_SECRET']
 Helper.authenticate
 Helper.test_login
 
-break_on_skip = true
+break_on_skip = arg?(:quick)
+
+overwrite = {}
+overwrite.merge!(info: true)                              if arg?('force-info')
+overwrite.merge!(exif: true, thumb: true, original: true) if arg?('force-photos')
+overwrite.merge!(set: true)                               if arg?('force-set')
+overwrite.merge!(user: true)                              if arg?('force-user')
+
 user = User.new(Helper.login['id'])
 
-user.write
+user.write(overwrite)
 
 user.sets.each do |set|
   break unless set
-  break if !set.write && break_on_skip
-  set.write if set
+  break if !set.write(overwrite) && break_on_skip
 end
 
 user.photos.each do |photo|
   break unless photo
-  break if !photo.write && break_on_skip
+  break if !photo.write(overwrite) && break_on_skip
 end
 
 puts "Done!".green
