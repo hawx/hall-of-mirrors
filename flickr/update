@@ -22,6 +22,8 @@ class FlickRaw::Response
     h = to_hash.map {|k,v|
       if v.respond_to?(:to_h)
         [k, v.to_h]
+      elsif v.respond_to?(:map) && v.all? {|obj| obj.respond_to?(:to_h) }
+        [k, v.map(&:to_h)]
       else
         [k, v]
       end
@@ -47,7 +49,7 @@ module Helper extend self
       flickr.get_access_token(token['oauth_token'], token['oauth_token_secret'], verify)
       login = flickr.test.login
       puts "You are now authenticated as #{login.username} with token #{flickr.access_token} and secret #{flickr.access_secret}"
-      File.write('_auth', "#{flickr.access_token}\n#{flickr.access_secret}")
+      File.write(HERE + '_auth', "#{flickr.access_token}\n#{flickr.access_secret}")
 
     rescue FlickRaw::FailedResponse => e
       puts "Authentication failed : #{e.msg}"
@@ -81,50 +83,8 @@ module Helper extend self
   rescue FlickRaw::OAuthClient::FailedResponse
     false
   end
-
-  def user_path
-    HERE + login.id.to_s
-  end
-
-  def photo_path(info)
-    user_path + 'photos' + info['id'].to_s
-  end
 end
 
-class Writer
-  def initialize(root)
-    @root = Pathname.new(File.expand_path(root))
-  end
-
-  def original(info)
-    p info; p info.originalsecret
-    exit
-    url = FlickRaw.url_o(info)
-    open(url) {|f|
-      write info, "photo_o.#{info.originalformat}", f.read
-    }
-  end
-
-  def thumbnail(info)
-    url = FlickRaw.url_z(info)
-    open(url) {|f|
-      write info, "photo_z.jpg", f.read
-    }
-  end
-
-  def info(info)
-    data = JSON.pretty_generate(info.to_h)
-    write info, "data.json", data
-  end
-
-  private
-
-  def write(info, path, content)
-    local = Helper.photo_path(info) + path
-    FileUtils.mkdir_p(File.dirname(@root + local))
-    File.write(@root + local, content)
-  end
-end
 
 class Photo
   def initialize(user, data)
@@ -140,6 +100,10 @@ class Photo
     flickr.photos.getInfo(photo_id: id).to_h
   end
 
+  def exif
+    flickr.photos.getExif(photo_id: id).to_h
+  end
+
   def to_json
     JSON.pretty_generate data
   end
@@ -148,18 +112,24 @@ class Photo
     @user.path + "photos" + id
   end
 
-  def write
+  def write(overwrite)
     wrote = false
     print path.to_s.blue.bold
     FileUtils.mkdir_p path
 
-    unless (path + 'data.json').exist?
+    if !(path + 'data.json').exist? || overwrite[:data]
       File.write(path + 'data.json', to_json)
       print "\n  wrote ".grey + "data.json"
       wrote = true
     end
 
-    unless (path + 'photo_z.jpg').exist?
+    if !(path + 'exif.json').exist? || overwrite[:exif]
+      File.write(path + 'exif.json', JSON.pretty_generate(exif))
+      print "\n  wrote ".grey + "exif.json"
+      wrote = true
+    end
+
+    if !(path + 'photo_z.jpg').exist? || overwrite[:thumb]
       open @data['url_z'] do |f|
         File.write(path + 'photo_z.jpg', f.read)
       end
@@ -167,7 +137,7 @@ class Photo
       wrote = true
     end
 
-    unless Pathname.glob(path + 'photo_o.*').size > 0
+    if Pathname.glob(path + 'photo_o.*').size == 0 || overwrite[:original]
       open @data['url_o'] do |f|
         File.write(path + "photo_o.#{data['originalformat']}", f.read)
       end
