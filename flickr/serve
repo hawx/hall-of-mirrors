@@ -69,6 +69,18 @@ class F::Photo
     @data ||= JSON.parse File.read(path + 'data.json')
   end
 
+  def exif
+    @exif ||= JSON.parse File.read(path + 'exif.json')
+  end
+
+  def has_exif?(name)
+    get_exif(name) != nil
+  end
+
+  def get_exif(name)
+    exif['exif'].find {|t| t['label'] == name || t['tag'] == name }
+  end
+
   def method_missing(sym, *args, &block)
     if data.key?(sym.to_s)
       data[sym.to_s]
@@ -180,7 +192,7 @@ class F::User
     @tags = Hash.new([])
     photos.each do |photo|
       photo.data['tags']['tag'].each do |tag|
-        @tags[tag] += [photo.id]
+        @tags[tag['_content']] += [photo.id]
       end
     end
 
@@ -252,12 +264,35 @@ helpers do
   end
 
   def meta(user, photo)
+    time = Time.parse(photo.dates['taken']) # Time.at(photo.dateuploaded.to_i)
+
+    # nicked from parallel-flickr, because it's nice
+    # straup/parallel-flickr/www/include/lib_flickr_dates.php
+    hour = case time.hour
+           when 0..6 then "after midnight"
+           when 6..8 then "in the wee small hours of the morning"
+           when 8..12 then "in the morning"
+           when 12..14 then "around noon"
+           when 14..18 then "in the afternoon"
+           when 18..20 then "in the evening"
+           else "at night"
+           end
+
+    ordinal = case time.day
+              when 1, 21 then "st"
+              when 2, 22 then "nd"
+              else "th"
+              end
+
+    day = time.strftime("%A %B %-d") + ordinal + time.strftime(" %Y")
+
     <<EOS
-<span>Uploaded on</span>
-<a href="#{photo.url}">#{Time.at(photo.dateuploaded.to_i).strftime("%b %-d, %Y")}</a>
-<span>by</span>
-<a href="#{user.url}">#{user.data['username']}</a>
+<time datetime="#{time.strftime("%FT%T%:z")}">#{day}, #{hour}</time>
 EOS
+  end
+
+  def partial(page, options={})
+    haml "partials/#{page}".to_sym, options.merge(:layout => false)
   end
 end
 
