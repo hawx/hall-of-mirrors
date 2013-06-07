@@ -12,7 +12,7 @@
         %a{href: @user.url}= @user.data['username']
         %span /
         - unless @photo.title.empty?
-          %a{href: @photo.url}= @photo.title
+          %a.here{href: @photo.url}= @photo.title
         - else
           %span __________
 
@@ -23,6 +23,31 @@
             %img{src: @photo.thumbnail_url}
 
           %div.meta= meta @user, @photo
+
+          - unless @photo.tags.empty?
+            %ul.tags
+              - for tag in @photo.tags['tag']
+                %li
+                  %a{href: @user.url + "/tags/" + tag['_content']}= tag['raw']
+              .clear
+
+          - unless @photo.exif['camera'].empty?
+            %ul.exif
+              %li= @photo.exif['camera']
+
+              - if @photo.has_exif?('Aperture')
+                %li= @photo.get_exif('Aperture')['clean']
+
+              - if @photo.has_exif?('Exposure')
+                %li= @photo.get_exif('Exposure')['raw']
+
+              - if @photo.has_exif?('ISO')
+                %li ISO #{@photo.get_exif('ISO')['raw']}
+
+              - if @photo.has_exif?('FocalLength')
+                %li= @photo.get_exif('FocalLength')['raw']
+
+              .clear
 
           %p= @photo.description
 
@@ -37,11 +62,7 @@
           %a.next{href: @photo.next.url}
             %img{src: @photo.next.thumbnail_url}
 
-
-        %ul.tags
-          - for tag in @photo.tags['tag']
-            %li
-              %a{href: @user.url + "/tags/" + tag}= tag
+      .clear.padding
 
     - if @photo.data['location']
       %script{src: '/app/modestmaps.min.js'}
