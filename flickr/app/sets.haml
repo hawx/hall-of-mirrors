@@ -11,7 +11,7 @@
         %span /
         %a{href: @user.url}= @user.data['username']
         %span /
-        %a{href: @user.url + '/sets'} sets
+        %a.here{href: @user.url + '/sets'} sets
 
     - for set in @sets
       .set

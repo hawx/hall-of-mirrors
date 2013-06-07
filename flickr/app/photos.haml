@@ -10,6 +10,16 @@
         %a{href: '/'} flickr
         %span /
         %a{href: @user.url}= @user.data['username']
+        %span /
+        .menu
+          %a.here{href: @user.url} photos
+          %a{href: @user.url + '/sets'} sets
+          %a{href: @user.url + '/tags'} tags
+          %span faves
+          %span cameras
+          %span places
+          %span archives
+
 
     %section
       .left
@@ -19,14 +29,6 @@
               %img{src: photo.thumbnail_url}
             %h4= photo.title
             %div.meta= meta @user, photo
-
-      .right
-        %h2 Sets
-        - for set in @user.sets
-          .set
-            %a{href: set.url}
-              %img{src: set.photos.first.thumbnail_url}
-              %h2= set.data['title']
 
       .clear
 
@@ -42,7 +44,7 @@
         - elsif page
           %a{href: @user.url_for_page(page)}= page
         - else
-          %span &hellip;
+          %span.disabled &hellip;
 
       - if @page < @user.page_count
         %a.next{href: @user.url_for_page(@page+1)} next &rarr;

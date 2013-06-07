@@ -1,29 +1,64 @@
+$flickr_blue: #0063dc
+$flickr_pink: #ff0084
+$flickr_grey: #bbbbbb
+
+$black: black
+$grey:  #aaa
+
+
 body
   background: white
   color: black
   font-family: 'Helvetica Neue', Helvetica, 'Lucida Grande', sans-serif
   font-size: 14px
   padding: 2em
+  line-height: 18px
 
 h1
   margin: 2em 0
   font-size: 26px
   font-weight: normal
+  position: relative
 
   a
     color: #000
     text-decoration: none
 
-    &:last-child
+    &.here
       font-weight: bold
 
   span
     color: #bbb
 
+  .menu
+    display: inline-block
+    position: relative
+
+    a
+      display: block
+      position: relative
+
+    a:not(.here), span
+      display: none
+
+    &:hover
+      a:not(.here), span
+        display: inline-table
+        float: left
+        clear: both
+        margin-top: 14px
+
+
 
 $left-width:  700px
 $right-width: 200px
 $gutter:      40px
+
+.clear
+  clear: both
+
+.padding
+  height: 5em
 
 section
   width: $left-width + $gutter + $right-width
@@ -52,8 +87,8 @@ section
     margin: 5px 0 0
 
   .meta
-    font-size: 11px
-    color: rgb(153, 153, 153)
+    font-size: 12px
+    color: $grey
     margin: 0
     margin-top: .5em
     line-height: 12px
@@ -62,7 +97,7 @@ section
     margin: 5px 0 2px
 
   a
-    color: #0063dc
+    color: $grey
     text-decoration: none
 
 .photo.display
@@ -116,32 +151,53 @@ section
       font-weight: normal
       color: black
 
-  .tags
-    margin-top: 12px
+.photo
+  ul
+    $label-width: 50px
+    margin-top: 16px
     list-style: none
     padding: 0
-    width: 140px
+    padding-left: $label-width
+
+    &:before
+      margin-top: 1px
+      line-height: 18px
+      position: absolute
+      margin-left: -$label-width
+      content: 'LABEL'
+      font-size: 11px
+      font-weight: bold
+      color: $flickr_pink
+
+    a
+      color: $black
 
     li
       float: left
 
       &:after
-        margin: 0 .6em
+        margin: 0 .8em 0 .6em
         content: '•'
         color: #bbb
 
-      &:last-child:after
+      &:last-of-type:after
         content: ''
+
+.photo .tags:before
+  content: 'TAGS'
+
+.photo .exif:before
+  content: 'EXIF'
 
 .nav
   a
     padding: 2px 6px
-    color: #0063dc
+    color: $black
     text-decoration: none
 
   .this-page
     font-weight: bold
-    color: #ff0084
+    color: $flickr_pink
     padding: 2px 6px
 
   .prev
@@ -151,4 +207,4 @@ section
     margin-left: 20px
 
   .disabled
-    color: #bbb
+    color: $grey
