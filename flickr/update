@@ -112,7 +112,7 @@ class Photo
     @user.path + "photos" + id
   end
 
-  def write(overwrite)
+  def write(overwrite={})
     wrote = false
     print path.to_s.blue.bold
     FileUtils.mkdir_p path
@@ -150,6 +150,8 @@ class Photo
     else
       print "\r  skipped ".red + path.to_s.grey + "\n"
     end
+
+    wrote
   end
 end
 
@@ -257,6 +259,8 @@ class User
     else
       print "\r  skipped ".red + path.to_s.grey + "\n"
     end
+
+    wrote
   end
 end
 
@@ -267,17 +271,20 @@ FlickRaw.shared_secret = ENV['FLICKR_SECRET']
 Helper.authenticate
 Helper.test_login
 
-
+break_on_skip = true
 user = User.new(Helper.login['id'])
 
 user.write
 
 user.sets.each do |set|
+  break unless set
+  break if !set.write && break_on_skip
   set.write if set
 end
 
 user.photos.each do |photo|
-  photo.write if photo
+  break unless photo
+  break if !photo.write && break_on_skip
 end
 
 puts "Done!".green
