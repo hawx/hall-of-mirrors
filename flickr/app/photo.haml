@@ -11,6 +11,8 @@
         %span /
         %a{href: @user.url}= @user.data['username']
         %span /
+        = partial :menu, locals: {name: 'photos'}
+        %span /
         - unless @photo.title.empty?
           %a.here{href: @photo.url}= @photo.title
         - else
@@ -22,7 +24,7 @@
           %a{href: @photo.original_url}
             %img{src: @photo.thumbnail_url}
 
-          %div.meta= meta @user, @photo
+          %div.meta= partial :meta, locals: {photo: @photo}
 
           - unless @photo.tags.empty?
             %ul.tags

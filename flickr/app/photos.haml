@@ -11,25 +11,10 @@
         %span /
         %a{href: @user.url}= @user.data['username']
         %span /
-        .menu
-          %a.here{href: @user.url} photos
-          %a{href: @user.url + '/sets'} sets
-          %a{href: @user.url + '/tags'} tags
-          %span faves
-          %a{href: @user.url + '/cameras'} cameras
-          %a{href: @user.url + '/places'} places
-          %span archives
-
+        = partial :menu, locals: {name: 'photos', here: true}
 
     %section
-      .left
-        - for photo in @photos
-          .photo
-            %a{href: photo.url}
-              %img{src: photo.thumbnail_url}
-            %h4= photo.title
-            %div.meta= meta @user, photo
-
+      .left= partial :photos, locals: {photos: @photos}
       .clear
 
     = partial :nav, locals: {obj: @user, page: @page}

@@ -11,17 +11,14 @@
         %span /
         %a{href: @user.url}= @user.data['username']
         %span /
-        %a{href: @user.url + '/sets'} sets
+        = partial :menu, locals: {name: 'sets'}
         %span /
         %a.here{href: @set.url}= @set.data['title']
 
       %p= @set.data['description']
 
-    - for photo in @photos
-      .photo
-        %a{href: photo.url}
-          %img{src: photo.thumbnail_url}
-        %h4= photo.title
-        %div.meta= meta @user, photo
+    %section
+      .left= partial :photos, locals: {photos: @photos}
+      .clear
 
     = partial :nav, locals: {obj: @set, page: @page}

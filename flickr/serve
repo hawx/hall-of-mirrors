@@ -318,6 +318,10 @@ class F::User
     }.flatten
   end
 
+  def camera(name)
+    cameras.find {|ca| ca.escaped_name == name }
+  end
+
   def tags
     return @tags if @tags
 
@@ -331,16 +335,28 @@ class F::User
     @tags = @tags.map {|k,v| F::Tag.new(self, v, k) }
   end
 
+  def tag(name)
+    tags.find {|tg| tg.name == name }
+  end
+
   def sets
     @sets ||= Dir[path + 'sets' + '*'].map {|dir|
       F::Set.new(self, dir.split("/").last.to_i)
     }.compact
   end
 
+  def set(id)
+    sets.find {|st| st.id == id.to_i }
+  end
+
   def photos
     @photos ||= Dir[path + 'photos' + '*'].map {|path|
       F::Photo.new(self, path.split("/").last.to_i)
     }.sort_by(&:sort_date).reverse
+  end
+
+  def photo(id)
+    photos.find {|ph| ph.id == id.to_i }
   end
 
   def places
@@ -363,24 +379,8 @@ class F::User
     @places = @places.map {|_,v| v }
   end
 
-  def photo(id)
-    photos.find {|ph| ph.id == id.to_i }
-  end
-
-  def camera(name)
-    cameras.find {|ca| ca.escaped_name == name }
-  end
-
-  def set(id)
-    sets.find {|st| st.id == id.to_i }
-  end
-
   def place(woeid)
     places.find {|pl| pl.id == woeid }
-  end
-
-  def tag(name)
-    tags.find {|tg| tg.name == name }
   end
 
   def inspect
@@ -404,36 +404,32 @@ helpers do
     parts.join(" / ")
   end
 
-  def meta(user, photo)
-    time = Time.parse(photo.dates['taken']) # Time.at(photo.dateuploaded.to_i)
-
-    # nicked from parallel-flickr, because it's nice
-    # straup/parallel-flickr/www/include/lib_flickr_dates.php
-    hour = case time.hour
-           when 0..6 then "after midnight"
-           when 6..8 then "in the wee small hours of the morning"
-           when 8..12 then "in the morning"
-           when 12..14 then "around noon"
-           when 14..18 then "in the afternoon"
-           when 18..20 then "in the evening"
-           else "at night"
-           end
-
-    ordinal = case time.day
-              when 1, 21 then "st"
-              when 2, 22 then "nd"
-              else "th"
-              end
-
-    day = time.strftime("%A %B %-d") + ordinal + time.strftime(" %Y")
-
-    <<EOS
-<time datetime="#{time.strftime("%FT%T%:z")}">#{day}, #{hour}</time>
-EOS
-  end
-
   def partial(page, options={})
     haml "partials/#{page}".to_sym, options.merge(:layout => false)
+  end
+end
+
+class Time
+  # nicked from parallel-flickr, because it's nice
+  # straup/parallel-flickr/www/include/lib_flickr_dates.php
+  def descriptive_hour
+    case hour
+    when 0..6 then "after midnight"
+    when 6..8 then "in the wee small hours of the morning"
+    when 8..12 then "in the morning"
+    when 12..14 then "around noon"
+    when 14..18 then "in the afternoon"
+    when 18..20 then "in the evening"
+    else "at night"
+    end
+  end
+
+  def ordinal
+    case day
+    when 1, 21 then "st"
+    when 2, 22 then "nd"
+    else "th"
+    end
   end
 end
 

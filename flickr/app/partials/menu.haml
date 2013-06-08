@@ -1,0 +1,18 @@
+- sections = {                 |
+    photos:   '',              |
+    sets:     '/sets',         |
+    tags:     '/tags',         |
+    faves:    '/faves',        |
+    cameras:  '/cameras',      |
+    places:   '/places',       |
+    archives: '/archives'      |
+  }                            |
+
+.menu
+  - if defined?(here)
+    %a.here.first{href: @user.url + sections[name.to_sym]}= name
+  - else
+    %a.first{href: @user.url + sections[name.to_sym]}= name
+
+  - sections.reject {|k,_| k.to_s == name }.each do |k,v|
+    %a{href: @user.url + v}= k

@@ -11,7 +11,7 @@
         %span /
         %a{href: @user.url}= @user.data['username']
         %span /
-        %a.here{href: @user.url + '/tags'} tags
+        = partial :menu, locals: {name: 'tags', here: true}
 
     %ul.tags
       - for tag in @tags.sort_by {|t| -t.photos.size }

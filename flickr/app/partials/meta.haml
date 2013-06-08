@@ -1,0 +1,5 @@
+- time = Time.parse(photo.dates['taken'])
+- hour = time.descriptive_hour
+- day  = time.strftime("%A %B %-d") + time.ordinal + time.strftime(" %Y")
+
+%time{datetime: time.strftime("%FT%T%:z")} #{day}, #{hour}
