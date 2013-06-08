@@ -44,17 +44,38 @@ photos belong too. Needs to get friends' profile picture(s?) to display
 also. And some things should be better about the served site, such as next/prev
 for photo pages, and maybe add maps.
 
+If you really want to play with this:
+- Create an app on Facebook
+- Export your App ID and App secret in your `.bashrc` (or similar) like:
+  ``` bash
+  export FACEBOOK_APP_ID='xxxxxx...'
+  export FACEBOOK_APP_SECRET='xxxxxxx...'
+  ```
+- Run `facebook/init` and follow the instructions
+- Run `facebook/update` and wait for it to pull all the photos
+- Run `facebook/serve` and open the address (usually <http://localhost:4567>)
 
-### flickr [70%]
+
+### flickr [75%]
 
 Pulls your photos. Need to work on getting faves also. Needs to have a page to
 select user. And if the URL could remember whether you entered a path alias,
-that would be nice. Speed-ups would be good. And a way to navigate/show set
-pages, and tag pages. Oh, and pretty up the tag list page, and add similar tags
-to each tag page. Special navigation for machine tags maybe? in a tree? Oh yes
-and allow wildcard machine tag searches. And pretty up set list pages. Last
-thing: add paging for large set pages, it can take a while to render sets with >
-100 photos.
+that would be nice. Speed-ups would be good. Oh, and pretty up the tag list
+page, and add similar tags to each tag page. Special navigation for machine tags
+maybe? in a tree? Oh yes and allow wildcard machine tag searches. And pretty up
+set list pages.
+
+If you really want to play with this:
+- (Create an app)[http://www.flickr.com/services/apps/create/] on flickr to get
+  a key/secret combo
+- Export them as environment variables in your `.bashrc` (or similar) like:
+  ```bash
+  export FLICKR_KEY='xxxxxxxxxxxxxxxx...'
+  export FLICKR_SECRET='xxxxxxxxxxxxxxxxxx...'
+  ```
+- Run `flickr/init`, and follow the instructions
+- Run `flickr/update` and do something else while it pulls your photos
+- Rune `flickr/serve` and open the address (usually <http://localhost:4567>)
 
 
 ### github [0%]
