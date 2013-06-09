@@ -89,10 +89,22 @@ If you really want to play with this:
 
 ### tumblr [80%]
 
-Pulls your data down, but need to work on getting faves and drafts as well. It
-sort of pulls local versions of stuff like photos and audio, but it doesn't yet
-serve the local audio up. Might eventually work on serving local versions of
-videos, but not yet. Apart for that it works pretty well.
+Pulls your data down, but need to work on getting faves and drafts as well.
+Apart for that it works pretty well. It pulls images, audio and videos (from
+tumblr, youtube and vimeo) and serves them with html5 elements. __Warning__:
+this can make the backups quite large, especially if you have a habit of posting
+long youtube videos (for reference my rather modest tumblr weighs in at 2.18 GB).
+
+To use:
+- (Register an application)[http://www.tumblr.com/oauth/apps]
+- Export the OAuth Consumer Key and Secret Key, like:
+  ``` bash
+  export TUMBLR_CONSUMER_KEY='xxxxxxx...'
+  export TUMBLR_CONSUMER_SECRET='xxxxxxxxxx...'
+  ```
+- Run `flickr/init` and follow the instructions, it hacks into the auth flow of [mwunsch/tumblr](https://github.com/mwunsch/tumblr) so isn't as smooth as the others
+- Run `flickr/update` and wait as it will download LOTS!
+- Run `flickr/serve` and open the address (usually <http://localhost:4567>)
 
 
 ### twitter [0%]
