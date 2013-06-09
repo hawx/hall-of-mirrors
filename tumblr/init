@@ -1,21 +1,23 @@
 #!/usr/bin/env ruby
 
+require 'pathname'
+require 'tumblr/authentication'
 require 'tumblr/command_line_interface'
-
 require 'weary/request'
 require 'weary/middleware'
+require 'launchy'
 
+
+HERE = Pathname.new(__FILE__) + '..'
 
 def authorize(*soak)
-  require 'tumblr/authentication'
-  require 'launchy'
   sinatra_options = {
-    :port => options[:port],
-    :bind => options[:bind],
-    :credential_path => options[:credentials]
+    :port => '4567',
+    :bind => 'localhost',
+    :credential_path => (HERE + '_auth').to_s
   }
   Tumblr::Authentication.run!(sinatra_options) do |server|
-    ::Launchy.open("http://#{options[:bind]}:#{options[:port]}/")
+    ::Launchy.open("http://localhost:4567/")
   end
   if has_credentials?
     ui_success "Success! Your Tumblr OAuth credentials were written to #{credentials.path}"
@@ -23,5 +25,7 @@ def authorize(*soak)
     ui_abort "Something went wrong in authorization, and credentials were not correctly written to #{credentials.path}"
   end
 end
+
+authorize
 
 puts "Now you have authenticated "

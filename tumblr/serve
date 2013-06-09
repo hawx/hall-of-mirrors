@@ -50,6 +50,28 @@ class Post
     "/resource/#{@user.name}/#{id}/" + (Digest::MD5.hexdigest(url) + File.extname(url))
   end
 
+  def audio_path(url)
+    plead = '?plead=please-dont-download-this-or-our-lawyers-wont-let-us-host-audio'
+    resource_path(url + plead)
+  end
+
+  # Yeah, this is awful
+  def image_urls
+    photos.map {|h|
+      o = h['original_size']['url']
+      if File.exist?(resource_path(o))
+        resource_path(o)
+      else
+        a = h['alt_sizes'].find {|h| h['width'] == 500 }
+        if a
+          resource_path(a['url'])
+        else
+          resource_path(o)
+        end
+      end
+    }
+  end
+
   def fix_resources(text)
     doc = Nokogiri::HTML(text)
     resources = doc.xpath('//img/@src').map(&:value)
@@ -164,9 +186,14 @@ get '/:user/page/:num/?' do
   haml :list
 end
 
+get '/resource/:user/:post/:resource.mp3/?' do
+  path = HERE + params[:user] + 'posts' + params[:post] + params[:resource]
+  send_file path, :type => :mp3
+end
+
 get '/resource/:user/:post/:resource/?' do
   path = HERE + params[:user] + 'posts' + params[:post] + params[:resource]
-  File.read(path)
+  send_file path
 end
 
 get '/:user/post/:id/?' do

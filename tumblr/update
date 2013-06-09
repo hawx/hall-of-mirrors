@@ -10,16 +10,18 @@ require 'uri'
 require 'clive/output'
 require 'tumblr_client'
 require 'seq/paged'
+require 'yaml'
+
 
 HERE = Pathname.new(__FILE__) + '..'
+AUTH = YAML.load_file(HERE + '_auth')
 
 Tumblr.configure do |config|
   config.consumer_key        = ENV['TUMBLR_CONSUMER_KEY']
   config.consumer_secret     = ENV['TUMBLR_CONSUMER_SECRET']
 
-  # Need to use an _auth file like flickr!
-  config.oauth_token         = "bB8tceY9hMBzvsn9E38qb6c0QoZBp8w0tblFVm9DeN8i3vihwM"
-  config.oauth_token_secret  = "itKKT3F5HKhlGCnKXsHjA0II2Q9hYERTARws57fhXSVOV5i14I"
+  config.oauth_token         = AUTH['token']
+  config.oauth_token_secret  = AUTH['token_secret']
 end
 
 module Url
@@ -33,21 +35,28 @@ module Url
 end
 
 class Resource
-  def initialize(post, url)
-    @post = post
-    @url  = url
+  def initialize(post, url, &block)
+    @post  = post
+    @url   = url
+    @block = block || proc do |url, path|
+      open(url) {|f| File.write(path, f.read)}
+    end
   end
 
   def path
     @post.path + (Digest::MD5.hexdigest(@url) + File.extname(@url))
   end
 
+  def inspect
+    "#<Resource #{path}>"
+  end
+
   def write
     unless File.exist?(path)
-      open(@url) {|f| File.write(path, f.read) }
+      @block.call(@url, path)
       puts '  wrote '.grey + path.basename.to_s
     end
-  rescue OpenURI::HTTPError => err
+  rescue Exception => err
     puts "  ERROR ".red.bold + @url + "\n    " + err.to_s
   end
 end
@@ -74,6 +83,10 @@ class Post
     @hash['type']
   end
 
+  def inspect
+    "#<Post #{path}>"
+  end
+
   def resources
     return @resources if @resources
 
@@ -86,13 +99,28 @@ class Post
 
     case type
     when 'photo'
-      @resources = @hash['photos'].map {|hsh| hsh['original_size']['url'] }
+      @resources = @hash['photos'].map {|hsh|
+        alt = hsh['alt_sizes'].find {|h| h['width'] == 500 }
+        [hsh['original_size']['url'], alt ? alt['url'] : nil]
+      }.flatten.compact
 
     when 'link'
       @resources = pull_from[@hash['description']]
 
     when 'video'
-      @resources = [] # could download the video, but will be too much work
+      @resources = []
+
+      if @hash['permalink_url'] =~ /(youtube|vimeo).com/
+        # downloads using the id as title
+        # tries 720p then 270p/360p MP4
+        @resources << Resource.new(self, @hash['permalink_url']) do |url, path|
+          out = File.absolute_path(path)
+          `youtube-dl --no-progress -f 22/18 -o #{out} #{url}`.strip
+        end
+
+      elsif @hash['video_url'] =~ /tumblr.com/
+        @resources << @hash['video_url']
+      end
 
     when 'text'
       @resources = pull_from[@hash['body']]
@@ -109,7 +137,7 @@ class Post
       @resources = [URI.unescape($1) + plead]
     end
 
-    @resources.map! {|url| Resource.new(self, url) }
+    @resources.map! {|url| url.class == Resource ? url : Resource.new(self, url) }
   end
 
   def write
@@ -173,7 +201,7 @@ end
 client = Tumblr::Client.new
 info   = client.info
 
-blogs  = info['user']['blogs'].map do |data|
+blogs = info['user']['blogs'].map do |data|
   Tumblelog.new(client, data)
 end
 

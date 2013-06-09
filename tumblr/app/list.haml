@@ -28,11 +28,10 @@
 
 
           - when 'photo'
-            - for url in post.photos.map {|h| h['original_size']['url'] }
+            - for url in post.image_urls
               - if post.image_permalink?
                 %a{href: post.image_permalink}
-                  %img{src: post.resource_path(url)}
-
+                  %img{src: url}
               - else
                 %img{src: url}
 
@@ -43,7 +42,12 @@
 
 
           - when 'video'
-            .video-container= post.player.last['embed_code']
+            - if post.permalink_url?
+              %video{controls: 'controls', src: post.resource_path(post.permalink_url)}
+            - elsif post.video_url?
+              %video{controls: 'controls', src: post.resource_path(post.video_url)}
+            - else
+              .video-container= post.player.last['embed_code']
 
             %hr.clear
 
@@ -52,24 +56,19 @@
 
 
           - when 'audio'
-            %audio{src: post.resource_path(post.audio_url)}
-              %p Your browser does not support the audio element.
+            - if post.data['album_art']
+              .artwork
+                %img{src: post.data['album_art']}
 
-            .player.embed= post.embed
+            %header
+              %h1
+                - if post.data['track_name']
+                  %strong= post.data['track_name']
+                - if post.data['artist']
+                  %span= post.data['artist']
 
-            // - if post.data['album_art']
-            //  .artwork
-            //    .mask
-            //    %img{src: post.data['album_art']}
-
-            // %header
-            //  %h1
-            //    - if post.data['track_name']
-            //      %strong= post.data['track_name']
-            //    - if post.data['artist']
-            //      %span= post.data['artist']
-
-            //  .player= post.data['embed']
+              %audio.player{controls: 'controls', src: post.audio_path(post.audio_url) + '.mp3'}
+                %p Your browser does not support the audio element.
 
             - if post.caption?
               .caption= post.caption
