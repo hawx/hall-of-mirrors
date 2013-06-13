@@ -13,8 +13,12 @@
         %span /
         = partial :menu, locals: {name: 'tags', here: true}
 
-    %ul.tags
-      - for tag in @tags.sort_by {|t| -t.photos.size }
-        %li
-          %a{href: tag.url}= tag.name
-          %span= tag.photos.size
+    %section
+      .left
+        %ul.tags
+          - for tag in @tags.sort_by {|t| -t.photos.size }
+            %li
+              %a{href: tag.url}= tag.name
+              %span= tag.photos.size
+
+      .clear

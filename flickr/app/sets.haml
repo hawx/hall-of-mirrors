@@ -13,8 +13,12 @@
         %span /
         = partial :menu, locals: {name: 'sets', here: true}
 
-    - for set in @sets
-      .set
-        %a{href: set.url}
-          %img{src: set.photos.first.thumbnail_url}
-          %h1= set.data['title']
+    %section
+      .left
+        - for set in @sets
+          .set
+            %a{href: set.url}
+              %img{src: set.photos.first.thumbnail_url}
+              %h1= set.data['title']
+
+      .clear
