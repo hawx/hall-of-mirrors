@@ -140,16 +140,26 @@ class Post
     @resources.map! {|url| url.class == Resource ? url : Resource.new(self, url) }
   end
 
-  def write
-    puts path.to_s.blue.bold
+  def write(overwrite={})
+    wrote = false
+    print path.to_s.blue.bold
+    FileUtils.mkdir_p(path)
 
-    unless File.exist?(path + 'data.json')
-      FileUtils.mkdir_p(path)
+    if !(path + 'data.json').exist? || overwrite[:data]
       File.write(path + 'data.json', to_json)
-      puts '  wrote '.grey + 'data.json'
+      print "\n  wrote ".grey + 'data.json'
+      wrote = true
+    end
+
+    if wrote
+      print "\n\n"
+    else
+      print "\r  skipped ".red + path.to_s.grey + "\n"
     end
 
     resources.each(&:write)
+
+    wrote
   end
 end
 
@@ -184,19 +194,50 @@ class Tumblelog
     end
   end
 
-  def write
+  def write(break_on_skip, overwrite={})
+    wrote = false
     puts path.to_s.blue.bold
+    FileUtils.mkdir_p(path)
 
-    unless File.exist?(path + 'data.json')
-      FileUtils.mkdir_p(path)
+    if !(path + 'data.json').exist? || overwrite[:data]
       File.write(path + 'data.json', to_json)
-      puts '  wrote '.grey + 'data.json'
+      print "\n  wrote ".grey + 'data.json'
+      wrote = true
     end
 
-    posts.each {|post| post.write if post }
+    if wrote
+      print "\n\n"
+    else
+      print "\r  skipped ".red + path.to_s.grey + "\n"
+    end
+
+    posts.each do |post|
+      break unless post
+      break if !post.write && break_on_skip
+    end
+
+    wrote
   end
 end
 
+def arg?(name)
+  !!ARGV.delete("--#{name}")
+end
+
+
+if arg?(:help)
+  puts <<EOS
+Usage: tumblr/update [options]
+
+  --quick              # Stop writing photos/sets on first skip
+  --help               # Display this help message
+
+EOS
+
+  exit
+end
+
+break_on_skip = arg?(:quick)
 
 client = Tumblr::Client.new
 info   = client.info
@@ -205,4 +246,6 @@ blogs = info['user']['blogs'].map do |data|
   Tumblelog.new(client, data)
 end
 
-blogs.each(&:write)
+blogs.each do |blog|
+  blog.write(break_on_skip)
+end
