@@ -10,11 +10,13 @@ require 'json'
 require 'pathname'
 require 'open-uri'
 require 'pp'
-require 'clive/output'
+require 'clive'
 require 'flickraw'
 require 'seq/paged'
+require_relative '../_common/writer'
 
 HERE = Pathname.new(__FILE__) + '..'
+
 
 class FlickRaw::Response
   # The built in #to_hash method doesn't do this deep stuff!
@@ -33,41 +35,16 @@ class FlickRaw::Response
 end
 
 module Helper extend self
-  # Runs the standard authenticartion flow. This involves printing a url and
-  # waiting for the number given by it. When we have the tokens, we save them to
-  # a local file so that they can be read, which saves having to authenticate
-  # properly every time. Though it probably is not great for security...
-  def run_authentication_flow
-    token = flickr.get_request_token
-    auth_url = flickr.get_authorize_url(token['oauth_token'])
-
-    puts "Open this url in your process to complete the authication process : #{auth_url}"
-    puts "Copy here the number given when you complete the process."
-    verify = gets.strip
-
-    begin
-      flickr.get_access_token(token['oauth_token'], token['oauth_token_secret'], verify)
-      login = flickr.test.login
-      puts "You are now authenticated as #{login.username} with token #{flickr.access_token} and secret #{flickr.access_secret}"
-      File.write(HERE + '_auth', "#{flickr.access_token}\n#{flickr.access_secret}")
-
-    rescue FlickRaw::FailedResponse => e
-      puts "Authentication failed : #{e.msg}"
+  def authenticate
+    unless (HERE + '_auth').exist?
+      puts "You must run flickr/init to authenticate!"
       exit
     end
-  end
 
-  # If we've already been authenticated, use those details, otherwise get some
-  # new ones.
-  def authenticate
-    if File.exist?(HERE + '_auth')
-      details = File.read(HERE + '_auth').split("\n")
+    details = File.read(HERE + '_auth').split("\n")
 
-      flickr.access_token = details[0]
-      flickr.access_secret = details[1]
-    end
-
-    run_authentication_flow unless login
+    flickr.access_token = details[0]
+    flickr.access_secret = details[1]
   end
 
   def test_login
@@ -87,6 +64,8 @@ end
 
 
 class Photo
+  include Writer
+
   def initialize(user, data)
     @user = user
     @data = data
@@ -97,11 +76,13 @@ class Photo
   end
 
   def data
-    flickr.photos.getInfo(photo_id: id).to_h
+    @__data ||= flickr.photos.getInfo(photo_id: id).to_h
   end
 
   def exif
-    flickr.photos.getExif(photo_id: id).to_h
+    @__exif ||= flickr.photos.getExif(photo_id: id).to_h
+  rescue FlickRaw::FailedResponse
+    @__exif = false
   end
 
   def to_json
@@ -112,50 +93,75 @@ class Photo
     @user.path + "photos" + id
   end
 
-  def write(overwrite={})
-    wrote = false
-    print path.to_s.blue.bold
-    FileUtils.mkdir_p path
+  def thumb_url
+    @data['url_z']
+  end
 
-    if !(path + 'data.json').exist? || overwrite[:data]
-      File.write(path + 'data.json', to_json)
-      print "\n  wrote ".grey + "data.json"
-      wrote = true
-    end
+  def original_url
+    @data['url_o']
+  end
 
-    if !(path + 'exif.json').exist? || overwrite[:exif]
-      File.write(path + 'exif.json', JSON.pretty_generate(exif))
-      print "\n  wrote ".grey + "exif.json"
-      wrote = true
-    end
-
-    if !(path + 'photo_z.jpg').exist? || overwrite[:thumb]
-      open @data['url_z'] do |f|
-        File.write(path + 'photo_z.jpg', f.read)
+  def self.thumb
+    Proc.new do |obj, wr|
+      open obj.thumb_url do |f|
+        name = 'photo_z.jpg'
+        File.write(obj.path + name, f.read)
+        name
       end
-      print "\n  wrote ".grey + "thumbnail"
-      wrote = true
     end
+  end
 
-    if Pathname.glob(path + 'photo_o.*').size == 0 || overwrite[:original]
-      open @data['url_o'] do |f|
-        File.write(path + "photo_o.#{data['originalformat']}", f.read)
+  def self.original
+    Proc.new do |obj, wr|
+      open obj.original_url do |f|
+        name = "photo_o.#{obj.data['originalformat']}"
+        File.write(obj.path + name, f.read)
+        name
       end
-      print "\n  wrote ".grey + "original"
-      wrote = true
     end
+  end
 
-    if wrote
-      print "\n\n"
-    else
-      print "\r  skipped ".red + path.to_s.grey + "\n"
-    end
+  writeable :data, 'data.json', :data
 
-    wrote
+  writeable :exif, 'exif.json', :exif do |obj|
+    obj.exif
+  end
+
+  writeable :thumb, 'photo_z.jpg', thumb do |obj|
+    obj.thumb_url
+  end
+
+  writeable :original, nil, original do |obj|
+    obj.original_url && Pathname.glob(obj.path + 'photo_o.*').size == 0
   end
 end
 
+class Favorite
+  include Writer
+
+  def initialize(user, data)
+    @user = user
+    @data = data
+  end
+
+  def id
+    @data['id'].to_s
+  end
+
+  def path
+    @user.path + 'favorites' + id
+  end
+
+  def data
+    @data.to_h
+  end
+
+  writeable :fave, 'data.json', :data
+end
+
 class Set
+  include Writer
+
   def initialize(user, data)
     @user = user
     @data = data
@@ -174,34 +180,20 @@ class Set
       .map {|hsh| hsh['id']}
   end
 
-  def to_json
-    JSON.pretty_generate(@data.to_h.merge(photos: photos))
+  def data
+    @data.to_h.merge(photos: photos)
   end
 
   def path
     @user.path + "sets" + id
   end
 
-  def write(overwrite={})
-    wrote = false
-    print path.to_s.blue.bold
-    FileUtils.mkdir_p(path)
-
-    if !(path + 'data.json').exist? || overwrite[:set]
-      File.write(path + 'data.json', to_json)
-      print "\n  wrote ".grey + 'data.json'
-      wrote = true
-    end
-
-    if wrote
-      print "\n\n"
-    else
-      print "\r  skipped ".red + path.to_s.grey + "\n"
-    end
-  end
+  writeable :set, 'data.json', :data
 end
 
 class User
+  include Writer
+
   def initialize(id)
     @id = id.to_s
   end
@@ -235,55 +227,39 @@ class User
     end
   end
 
+  def favorites
+    Seq::Paged.new do |page|
+      opts = {
+        user_id:  @id,
+        per_page: 500,
+        page:     page,
+        extras:   'url_z,url_o'
+      }
+
+      flickr.favorites.getList(opts).to_a.map {|data|
+        owner = User.new(data['owner'])
+        [Photo.new(owner, data), Favorite.new(self, data)]
+      }.flatten
+    end
+  end
+
   def data
     flickr.people.getInfo(user_id: @id).to_h
   end
 
-  def to_json
-    JSON.pretty_generate data
-  end
-
-  def write(overwrite={})
-    wrote = false
-    print path.to_s.blue.bold
-    FileUtils.mkdir_p(path)
-
-    if !(path + 'data.json').exist? || overwrite[:user]
-      File.write(path + 'data.json', to_json)
-      print "\n  wrote ".grey + 'data.json'
-      wrote = true
-    end
-
-    if wrote
-      print "\n\n"
-    else
-      print "\r  skipped ".red + path.to_s.grey + "\n"
-    end
-
-    wrote
-  end
+  writeable :user, 'data.json', :data
 end
 
-def arg?(name)
-  !!ARGV.delete("--#{name}")
+class CLI < Clive
+  bool :q, :quick, 'Stop writing photos/sets/faves on first skipped'
+
+  bool :force_photo, 'Force overwrite of photo data and images'
+  bool :force_info,  'Force overwrite of photo info'
+  bool :force_set,   'Force overwrite of set data'
+  bool :force_fave,  'Force overwrite of fave data'
 end
 
-if arg?(:help)
-  puts <<EOS
-Usage: flickr/update [options]
-
-  --quick              # Stop writing photos/sets on first skip
-  --force-info         # Force overwrite of info
-  --force-photo        # Force overwrite of exif data, thumbnail image and
-                       # original image
-  --force-set          # Force overwrite of sets
-  --force-user         # Force overwrite of user data
-  --help               # Display this help message
-
-EOS
-
-  exit
-end
+result = CLI.run
 
 FlickRaw.api_key = ENV['FLICKR_KEY']
 FlickRaw.shared_secret = ENV['FLICKR_SECRET']
@@ -291,26 +267,36 @@ FlickRaw.shared_secret = ENV['FLICKR_SECRET']
 Helper.authenticate
 Helper.test_login
 
-break_on_skip = arg?(:quick)
+break_on_skip = result[:quick]
 
 overwrite = {}
-overwrite.merge!(info: true)                              if arg?('force-info')
-overwrite.merge!(exif: true, thumb: true, original: true) if arg?('force-photos')
-overwrite.merge!(set: true)                               if arg?('force-set')
-overwrite.merge!(user: true)                              if arg?('force-user')
+overwrite.merge!(info: true)                              if result[:force_info]
+overwrite.merge!(exif: true, thumb: true, original: true) if result[:force_photos]
+overwrite.merge!(set:  true)                              if result[:force_set]
+overwrite.merge!(user: true)                              if result[:force_user]
+overwrite.merge!(fave: true)                              if result[:force_fave]
 
 user = User.new(Helper.login['id'])
 
+puts "User".bold
 user.write(overwrite)
 
+puts "Photos".bold
+user.photos.each do |photo|
+  break unless photo
+  break if !photo.write(overwrite) && break_on_skip
+end
+
+puts "Sets".bold
 user.sets.each do |set|
   break unless set
   break if !set.write(overwrite) && break_on_skip
 end
 
-user.photos.each do |photo|
-  break unless photo
-  break if !photo.write(overwrite) && break_on_skip
+puts "Favorites".bold
+user.favorites.each do |fave|
+  break unless fave
+  break if !fave.write(overwrite) && break_on_skip
 end
 
 puts "Done!".green
