@@ -1,0 +1,19 @@
+!!!
+%html
+  %head
+    %title= title
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a.here{href: '/'} flickr
+
+
+    %section
+      .left
+        - for user in @users
+          %li
+            %a{href: user.url}= user.name
+
+      .clear

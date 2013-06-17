@@ -20,5 +20,16 @@
             %a{href: set.url}
               %img{src: set.photos.first.thumbnail_url}
               %h1= set.data['title']
+            .meta
+              - start = short_time_from_string set.photos.last.dates['taken']
+              - ended = short_time_from_string set.photos.first.dates['taken']
+
+              - if start == ended
+                %span= start
+
+              - else
+                = start
+                %span to
+                = ended
 
       .clear

@@ -442,6 +442,19 @@ end
 
 
 helpers do
+  def short_time_from_string(d)
+    time = Time.parse(d)
+    day  = time.strftime("%B %-d") + time.ordinal + time.strftime(" %Y")
+    "<time datetime=\"#{time.strftime("%FT%T%:z")}\">#{day}</time>"
+  end
+
+  def time_from_string(d)
+    time = Time.parse(d)
+    hour = time.descriptive_hour
+    day  = time.strftime("%A %B %-d") + time.ordinal + time.strftime(" %Y")
+    "<time datetime=\"#{time.strftime("%FT%T%:z")}\">#{day}, #{hour}</time>"
+  end
+
   def title(*parts)
     parts = %w(flickr) + parts.map {|part|
       part.respond_to?(:name) ? part.name : part
