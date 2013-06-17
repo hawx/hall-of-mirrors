@@ -33,7 +33,7 @@
                   %a{href: @user.url + "/tags/" + tag['_content']}= tag['raw']
               .clear
 
-          - unless @photo.exif['camera'].empty?
+          - unless !@photo.exif['camera'] || @photo.exif['camera'].empty?
             %ul.exif
               %li
                 - cam_url = @photo.exif['camera'].downcase.gsub(' ', '-')

@@ -40,6 +40,17 @@ module F::Pageable
   end
 end
 
+class F::GenericPageable
+  include F::Pageable
+  attr_reader :url, :photos
+
+  def initialize(url, photos)
+    @url = url
+    @photos = photos
+  end
+end
+
+
 class F::Photo
   attr_reader :id
 
@@ -83,7 +94,9 @@ class F::Photo
   end
 
   def original_url
-    '/' + Pathname.glob(path + 'photo_o.*').first.relative_path_from(HERE).to_s
+    name = Pathname.glob(path + 'photo_o.*').first
+    return thumbnail_url unless name
+    '/' + name.relative_path_from(HERE).to_s
   end
 
   def thumbnail_url
@@ -96,6 +109,8 @@ class F::Photo
 
   def exif
     @exif ||= JSON.parse File.read(path + 'exif.json')
+  rescue
+    {}
   end
 
   def has_exif?(name)
@@ -118,6 +133,17 @@ class F::Photo
     end
   end
 end
+
+class F::ExtendedPhoto < F::Photo
+  attr_reader :extended_data
+
+  def initialize(user, id, extended_data)
+    @user = user
+    @id = id
+    @extended_data = extended_data
+  end
+end
+
 
 class F::Set
   include F::Pageable
@@ -249,7 +275,7 @@ class F::User
   include F::Pageable
 
   def self.all
-    Dir[HERE + '*@*'].map {|path|
+    @all ||= Dir[HERE + '*@*'].map {|path|
       new path.split('/').last
     }
   end
@@ -257,7 +283,7 @@ class F::User
   # term could be an id (nsid) or path_alias.
   def self.find(term)
     all.find {|user|
-      user.data['id'] == term || user.data['path_alias'] == term
+      user.id == term || user.data['path_alias'] == term
     }
   end
 
@@ -276,7 +302,11 @@ class F::User
   end
 
   def data
-    @data ||= JSON.parse File.read(path + 'data.json')
+    if (path + 'data.json').exist?
+      @data ||= JSON.parse File.read(path + 'data.json')
+    else
+      {}
+    end
   end
 
   def url
@@ -321,6 +351,21 @@ class F::User
   def camera(name)
     cameras.find {|ca| ca.escaped_name == name }
   end
+
+
+  def faves
+    return @faves if @faves
+
+    faves = Dir[path + 'favorites' + '*'].map {|dir|
+      JSON.load File.read(dir + '/data.json')
+    }.sort_by {|data| -data['date_faved'].to_i }.map {|data|
+      user = F::User.find(data['owner'])
+      F::ExtendedPhoto.new(user, data['id'], data)
+    }
+
+    @faves = F::GenericPageable.new(self.url + '/faves', faves)
+  end
+
 
   def tags
     return @tags if @tags
@@ -453,6 +498,27 @@ get '/photos/:user/page/:num/?' do
 
   @photos = @user.page(@page)
   haml :photos
+end
+
+
+get '/photos/:user/faves/?' do
+  @user   = F::User.find(params[:user])
+  @faves  = @user.faves
+  @page   = 0
+  @photos = @faves.page(@page)
+
+  haml :faves
+end
+
+get '/photos/:user/faves/page/:num/?' do
+  @user   = F::User.find(params[:user])
+  @faves  = @user.faves
+  @page   = params[:num].to_i
+  @photos = @faves.page(@page)
+
+  redirect @user.url + '/faves' if @page == 0
+
+  haml :faves
 end
 
 
