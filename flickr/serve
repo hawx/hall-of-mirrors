@@ -479,6 +479,11 @@ class Time
 end
 
 
+get '/' do
+  @users = F::User.all
+  haml :users
+end
+
 get '/styles.css' do
   sass :styles
 end

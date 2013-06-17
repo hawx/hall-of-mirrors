@@ -238,7 +238,7 @@ class User
 
       flickr.favorites.getList(opts).to_a.map {|data|
         owner = User.new(data['owner'])
-        [Photo.new(owner, data), Favorite.new(self, data)]
+        [owner, Photo.new(owner, data), Favorite.new(self, data)]
       }.flatten
     end
   end

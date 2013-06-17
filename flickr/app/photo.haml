@@ -50,7 +50,6 @@
 
               - if @photo.has_exif?('FocalLength')
                 %li= @photo.get_exif('FocalLength')['raw']
-
               .clear
 
           %p.description= @photo.description

@@ -103,14 +103,6 @@ section
 .photo.display
   width: $left-width
 
-.description
-  color: $black
-  font: 17px Baskerville, serif
-
-  a
-    color: $flickr_blue
-    text-decoration: underline
-
 .right
   *:first-child
     margin-top: 0
@@ -162,8 +154,9 @@ section
 
 
 .photo
+  $label-width: 50px
+
   ul
-    $label-width: 50px
     margin-top: 16px
     list-style: none
     padding: 0
@@ -192,6 +185,19 @@ section
 
       &:last-of-type:after
         content: ''
+
+
+  .description
+    margin-top: 1.5em
+    color: $black
+    border-left: 2px solid $grey
+    padding-left: $label-width / 2 - 2
+    font: italic 18px/1.4 Palatino, Georgia, serif
+
+    a
+      color: $flickr_blue
+      text-decoration: underline
+
 
 .photo .tags:before
   content: 'TAGS'
