@@ -5,6 +5,7 @@
 !*/
 
 # And finally whitelist the files
+!update
 !_common/*
 !*/init
 !*/update

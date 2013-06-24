@@ -1,0 +1,10 @@
+echo "Updating flickr..."
+flickr/update --quick
+
+echo ""
+echo "Updating tumblr..."
+tumblr/update --quick
+
+echo ""
+echo "Updating facebook..."
+facebook/update --quick
