@@ -1,9 +1,7 @@
 #!/usr/bin/env ruby
 
+require_relative '../_common/global'
 require 'flickraw'
-require 'pathname'
-
-HERE = Pathname.new(__FILE__) + '..'
 
 module Helper extend self
   # Runs the standard authenticartion flow. This involves printing a url and
@@ -14,15 +12,15 @@ module Helper extend self
     token = flickr.get_request_token
     auth_url = flickr.get_authorize_url(token['oauth_token'])
 
-    puts "Open this url in your process to complete the authication process : #{auth_url}"
+    puts "Open this url in your process to complete the authication process: #{auth_url}"
     puts "Copy here the number given when you complete the process."
     verify = gets.strip
 
     begin
       flickr.get_access_token(token['oauth_token'], token['oauth_token_secret'], verify)
-      login = flickr.test.login
-      puts "You are now authenticated as #{login.username} with token #{flickr.access_token} and secret #{flickr.access_secret}"
-      File.write('_auth', "#{flickr.access_token}\n#{flickr.access_secret}")
+
+      Config.set :flickr, :access_token, flickr.access_token
+      Config.set :flickr, :access_secret, flickr.access_secret
 
     rescue FlickRaw::FailedResponse => e
       puts "Authentication failed : #{e.msg}"
@@ -33,12 +31,8 @@ module Helper extend self
   # If we've already been authenticated, use those details, otherwise get some
   # new ones.
   def authenticate
-    if File.exist?(HERE + '_auth')
-      details = File.read(HERE + '_auth').split("\n")
-
-      flickr.access_token = details[0]
-      flickr.access_secret = details[1]
-    end
+    flickr.access_token = Config.get(:flickr, :access_token)
+    flickr.access_secret = Config.get(:flickr, :access_secret)
 
     run_authentication_flow unless login
   end

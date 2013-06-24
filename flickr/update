@@ -14,8 +14,7 @@ require 'clive'
 require 'flickraw'
 require 'seq/paged'
 require_relative '../_common/writer'
-
-HERE = Pathname.new(__FILE__) + '..'
+require_relative '../_common/global'
 
 
 class FlickRaw::Response
@@ -36,15 +35,13 @@ end
 
 module Helper extend self
   def authenticate
-    unless (HERE + '_auth').exist?
+    unless Config.has?(:flickr)
       puts "You must run flickr/init to authenticate!"
       exit
     end
 
-    details = File.read(HERE + '_auth').split("\n")
-
-    flickr.access_token = details[0]
-    flickr.access_secret = details[1]
+    flickr.access_token = Config.get(:flickr, :access_token)
+    flickr.access_secret = Config.get(:flickr, :access_secret)
   end
 
   def test_login
@@ -199,7 +196,7 @@ class User
   end
 
   def path
-    HERE + @id
+    ROOT + 'flickr' + @id
   end
 
   def photos
