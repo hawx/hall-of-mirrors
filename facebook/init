@@ -4,8 +4,10 @@ require 'launchy'
 require 'koala'
 require 'pathname'
 require 'sinatra/base'
+require_relative '../_common/global'
 
-HERE  = Pathname.new(__FILE__) + '..'
+exit if Config.has?(:facebook)
+
 OAUTH = Koala::Facebook::OAuth.new(ENV['FACEBOOK_APP_ID'],
                                 ENV['FACEBOOK_APP_SECRET'],
                                 'http://localhost:8080/auth')
@@ -24,8 +26,8 @@ class AuthClient < Sinatra::Base
     code = params['code']
     token = OAUTH.get_access_token(code)
 
-    File.write(HERE + '_auth', token)
-    "Wrote token to _auth, you can now quit!"
+    Config.set :facebook, :token, token
+    "Wrote token, you can now quit!"
   end
 end
 

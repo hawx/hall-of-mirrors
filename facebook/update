@@ -11,9 +11,8 @@ require 'json'
 require 'pp'
 require 'open-uri'
 require 'clive'
+require_relative '../_common/global'
 require_relative '../_common/writer'
-
-HERE = Pathname.new(__FILE__) + '..'
 
 class Photo
   include Writer
@@ -190,7 +189,7 @@ class User
   end
 
   def path
-    HERE + id.to_s
+    ROOT + 'facebook' + id.to_s
   end
 
   def albums
@@ -279,12 +278,12 @@ end
 
 result = CLI.run
 
-unless File.exist?(HERE + '_auth')
+unless Config.has?(:facebook)
   puts "You must run facebook/init to authenticate first!"
   exit 2
 end
 
-token = File.read(HERE + '_auth')
+token = Config.get(:facebook, :token)
 
 GRAPH = Koala::Facebook::API.new(token)
 
@@ -316,7 +315,7 @@ me.albums.each do |album|
   end
 end
 
-puts "Friends"
+puts "Friends".bold
 me.connected_people.each do |person|
   person.write(overwrite)
 end
