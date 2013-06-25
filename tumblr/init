@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 
-require 'sinatra/base'
 require 'weary/request'
 require 'weary/middleware'
+require 'sinatra/base'
 require 'launchy'
 require_relative '../_common/global'
 
