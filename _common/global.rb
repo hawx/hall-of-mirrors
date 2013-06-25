@@ -1,3 +1,4 @@
+require 'fileutils'
 require 'pathname'
 require 'yaml'
 
@@ -6,6 +7,8 @@ HERE = Pathname.new(__FILE__) + '..' + '..'
 ROOT = ENV['MIRROR_ROOT'] ? Pathname.new(ENV['MIRROR_ROOT']) : HERE
 
 CONFIG_FILE = ROOT + 'config.yml'
+
+FileUtils.mkdir_p ROOT
 
 # Config is a globally available object to push configuration values onto. It
 # uses the convention of namespaces to support multiple tools using the same
