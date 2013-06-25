@@ -10,9 +10,9 @@ require 'time'
 require 'pathname'
 require 'seq'
 require 'seq/pager'
+require_relative '../_common/global'
 
 PAGE_SIZE = 10
-HERE = Pathname.new(__FILE__) + '..'
 set :views, File.dirname(__FILE__) + '/app'
 
 
@@ -98,7 +98,7 @@ end
 
 class User
   def self.all
-    Dir[HERE + '*/'].reject {|path|
+    Dir[ROOT + 'tumblr' + '*/'].reject {|path|
       path.end_with?('/app/')
     }.map {|path|
       new(path.split("/").last)
@@ -118,7 +118,7 @@ class User
   end
 
   def path
-    HERE + @name
+    ROOT + 'tumblr' + @name
   end
 
   def url
@@ -187,12 +187,12 @@ get '/:user/page/:num/?' do
 end
 
 get '/resource/:user/:post/:resource.mp3/?' do
-  path = HERE + params[:user] + 'posts' + params[:post] + params[:resource]
+  path = ROOT + 'tumblr' + params[:user] + 'posts' + params[:post] + params[:resource]
   send_file path, :type => :mp3
 end
 
 get '/resource/:user/:post/:resource/?' do
-  path = HERE + params[:user] + 'posts' + params[:post] + params[:resource]
+  path = ROOT + 'tumblr' + params[:user] + 'posts' + params[:post] + params[:resource]
   send_file path
 end
 

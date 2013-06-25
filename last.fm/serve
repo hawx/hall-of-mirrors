@@ -18,8 +18,8 @@ require 'sinatra'
 require 'pathname'
 require 'dm-core'
 require_relative 'app/models'
+require_relative '../_common/global'
 
-HERE = Pathname.new(__FILE__) + '..'
 set :views, File.dirname(__FILE__) + '/app'
 
 
@@ -38,7 +38,7 @@ class User
   end
 
   def path
-    HERE + @name
+    ROOT + 'last.fm' + @name
   end
 
   def url

@@ -7,9 +7,9 @@ require 'time'
 require 'maruku'
 require 'sinatra'
 require 'seq/pager'
+require_relative '../_common/global'
 
 PAGE_SIZE = 10
-HERE = Pathname.new(__FILE__) + '..'
 set :public_folder, File.dirname(__FILE__)
 set :views, File.dirname(__FILE__) + '/app'
 
@@ -96,11 +96,11 @@ class F::Photo
   def original_url
     name = Pathname.glob(path + 'photo_o.*').first
     return thumbnail_url unless name
-    '/' + name.relative_path_from(HERE).to_s
+    '/' + name.relative_path_from(ROOT + 'flickr').to_s
   end
 
   def thumbnail_url
-    '/' + path.relative_path_from(HERE).to_s + '/photo_z.jpg'
+    '/' + path.relative_path_from(ROOT + 'flickr').to_s + '/photo_z.jpg'
   end
 
   def data
@@ -275,7 +275,7 @@ class F::User
   include F::Pageable
 
   def self.all
-    @all ||= Dir[HERE + '*@*'].map {|path|
+    @all ||= Dir[ROOT + 'flickr' + '*@*'].map {|path|
       new path.split('/').last
     }
   end
@@ -298,7 +298,7 @@ class F::User
   end
 
   def path
-    HERE + @id.to_s
+    ROOT + 'flickr' + @id.to_s
   end
 
   def data
@@ -657,4 +657,14 @@ get '/photos/:user/:photo/?' do
   @photo = @user.photo(params[:photo])
 
   haml :photo
+end
+
+
+get '/:user/photos/:id/photo_z.jpg' do
+  send_file ROOT + 'flickr' + params[:user] + 'photos' + params[:id] + 'photo_z.jpg'
+end
+
+get '/:user/photos/:id/photo_o.:ext' do
+  send_file ROOT + 'flickr' + params[:user] + 'photos' + params[:id] +
+    ('photo_o.' + params[:ext])
 end
