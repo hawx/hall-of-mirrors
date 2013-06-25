@@ -11,17 +11,14 @@ require 'clive/output'
 require 'tumblr_client'
 require 'seq/paged'
 require 'yaml'
-
-
-HERE = Pathname.new(__FILE__) + '..'
-AUTH = YAML.load_file(HERE + '_auth')
+require_relative '../_common/global'
 
 Tumblr.configure do |config|
   config.consumer_key        = ENV['TUMBLR_CONSUMER_KEY']
   config.consumer_secret     = ENV['TUMBLR_CONSUMER_SECRET']
 
-  config.oauth_token         = AUTH['token']
-  config.oauth_token_secret  = AUTH['token_secret']
+  config.oauth_token         = Config.get(:tumblr, :oauth_token)
+  config.oauth_token_secret  = Config.get(:tumblr, :oauth_token_secret)
 end
 
 module Url
@@ -178,7 +175,7 @@ class Tumblelog
   end
 
   def path
-    HERE + name
+    ROOT + 'tumblr' + name
   end
 
   def posts
