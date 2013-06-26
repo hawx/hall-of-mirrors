@@ -10,7 +10,7 @@ class CLI < Clive
   command :facebook do
     require_relative '../lib/hall-of-mirrors/facebook/init'
     require_relative '../lib/hall-of-mirrors/facebook/update'
-    # require_relative '../lib/hall-of-mirrors/facebook/serve'
+    require_relative '../lib/hall-of-mirrors/facebook/serve'
 
     Hall::Facebook.run
   end

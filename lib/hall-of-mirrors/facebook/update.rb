@@ -12,264 +12,265 @@ require 'pp'
 require 'open-uri'
 require 'clive'
 
-class Photo
-  include Writer
+module Hall::Facebook::Update
+  class Photo
+    include Writer
 
-  attr_reader :data
+    attr_reader :data
 
-  def initialize(album, data)
-    @album = album
-    @data = data
-  end
+    def initialize(album, data)
+      @album = album
+      @data = data
+    end
 
-  def id
-    @data["id"]
-  end
+    def id
+      @data["id"]
+    end
 
-  def source
-    @data["source"]
-  end
+    def source
+      @data["source"]
+    end
 
-  def thumb
-    @data["images"].map {|hsh| hsh["source"] }.find {|s| s[-5..-1] == "a.jpg" }
-  end
+    def thumb
+      @data["images"].map {|hsh| hsh["source"] }.find {|s| s[-5..-1] == "a.jpg" }
+    end
 
-  def size
-    [@data["height"], @data["width"]]
-  end
+    def size
+      [@data["height"], @data["width"]]
+    end
 
-  def created
-    @data["created_time"]
-  end
+    def created
+      @data["created_time"]
+    end
 
-  def path
-    @album.path + id.to_s
-  end
+    def path
+      @album.path + id.to_s
+    end
 
-  def self.thumb
-    Proc.new do |obj, wr|
-      name = 'thumb.jpg'
-      open obj.thumb do |f|
-        File.write(obj.path + name, f.read)
+    def self.thumb
+      Proc.new do |obj, wr|
+        name = 'thumb.jpg'
+        open obj.thumb do |f|
+          File.write(obj.path + name, f.read)
+        end
+        name
       end
-      name
     end
-  end
 
-  def self.photo
-    Proc.new do |obj, wr|
-      name = 'photo.jpg'
-      open obj.source do |f|
-        File.write(obj.path + name, f.read)
+    def self.photo
+      Proc.new do |obj, wr|
+        name = 'photo.jpg'
+        open obj.source do |f|
+          File.write(obj.path + name, f.read)
+        end
+
+        photo = MiniExiftool.new (obj.path + name).to_s
+        photo['DateTimeOriginal'] = obj.created.split("T").join(" ")
+        photo.save
+        name
       end
+    end
 
-      photo = MiniExiftool.new (obj.path + name).to_s
-      photo['DateTimeOriginal'] = obj.created.split("T").join(" ")
-      photo.save
-      name
+    writeable :data, 'data.json', :data
+    writeable :thumb, 'thumb.jpg', thumb
+    writeable :photo, 'photo.jpg', photo
+  end
+
+  class Album
+    include Writer
+
+    def self.for(id)
+      GRAPH.get_object("#{id}/albums").map {|a| Album.new(a) }
+    end
+
+    def self.with_id(id)
+      Album.new GRAPH.get_object(id)
+    end
+
+    attr_reader :data
+
+    def initialize(data)
+      @data = data
+    end
+
+    def from
+      @data['from']['id']
+    end
+
+    def user
+      User.find from
+    end
+
+    def id
+      @data["id"]
+    end
+
+    def size
+      @data["count"]
+    end
+
+    def name
+      @data["name"]
+    end
+
+    def path
+      user.path + "photos" + id
+    end
+
+    # Filter out photos taken in Clubs, etc. because I don't really want 1000s of
+    # photos of random people.
+    def ignore?
+      cat = @data['from']['category']
+
+      cat == "Club" || cat == "Arts/entertainment/nightlife"
+    end
+
+    def photos
+      return [] if ignore?
+
+      photos = GRAPH.get_object(id + "?fields=photos.limit(200)")
+      return [] unless photos['photos']
+
+      PhotoIterator.new(GRAPH, self, photos)
+    end
+
+    writeable :album, 'data.json', :data do |obj|
+      !obj.ignore?
+    end
+
+    def inspect
+      "#<Album #{name}>"
     end
   end
 
-  writeable :data, 'data.json', :data
-  writeable :thumb, 'thumb.jpg', thumb
-  writeable :photo, 'photo.jpg', photo
-end
 
-class Album
-  include Writer
+  class PhotoIterator
+    include Enumerable
 
-  def self.for(id)
-    GRAPH.get_object("#{id}/albums").map {|a| Album.new(a) }
-  end
-
-  def self.with_id(id)
-    Album.new GRAPH.get_object(id)
-  end
-
-  attr_reader :data
-
-  def initialize(data)
-    @data = data
-  end
-
-  def from
-    @data['from']['id']
-  end
-
-  def user
-    User.find from
-  end
-
-  def id
-    @data["id"]
-  end
-
-  def size
-    @data["count"]
-  end
-
-  def name
-    @data["name"]
-  end
-
-  def path
-    user.path + "photos" + id
-  end
-
-  # Filter out photos taken in Clubs, etc. because I don't really want 1000s of
-  # photos of random people.
-  def ignore?
-    cat = @data['from']['category']
-
-    cat == "Club" || cat == "Arts/entertainment/nightlife"
-  end
-
-  def photos
-    return [] if ignore?
-
-    photos = GRAPH.get_object(id + "?fields=photos.limit(200)")
-    return [] unless photos['photos']
-
-    PhotoIterator.new(GRAPH, self, photos)
-  end
-
-  writeable :album, 'data.json', :data do |obj|
-    !obj.ignore?
-  end
-
-  def inspect
-    "#<Album #{name}>"
-  end
-end
-
-
-class PhotoIterator
-  include Enumerable
-
-  def initialize(graph, album, raw)
-    @album = album
-    @pager = Koala::Facebook::API::GraphCollection.new(raw['photos'], graph)
-  end
-
-  def each
-    @pager.raw_response['data'].each do |data|
-      yield Photo.new(@album, data)
+    def initialize(graph, album, raw)
+      @album = album
+      @pager = Koala::Facebook::API::GraphCollection.new(raw['photos'], graph)
     end
 
-    while @pager.next_page_params
-      @pager = @pager.next_page
-
+    def each
       @pager.raw_response['data'].each do |data|
         yield Photo.new(@album, data)
       end
-    end
-  end
-end
 
-class User
-  include Writer
+      while @pager.next_page_params
+        @pager = @pager.next_page
 
-  @@users = Set.new
-
-  def self.find(id)
-    @@users.find {|user| user.id.to_s == id.to_s } ||
-      User.new(id).tap {|user| @@users << user }
-  end
-
-  def self.me
-    @@me ||= User.new(GRAPH.get_object('me')['id']).tap {|user| @@users << user }
-  end
-
-  attr_reader :id
-
-  def initialize(id)
-    @id = id
-  end
-
-  def path
-    ROOT + 'facebook' + id.to_s
-  end
-
-  def albums
-    @albums ||= Album.for(@id)
-  end
-
-  def connected_people
-    return @connected_people if @connected_people
-
-    people = Set.new
-
-    albums.each do |album|
-      if album.data['comments']
-        people += album.data['comments']['data'].map {|data|
-          data['from']['id']
-        }
-      end
-
-      if album.data['likes']
-        people += album.data['likes']['data'].map {|data|
-          data['id']
-        }
-      end
-    end
-
-    @connected_people = people.delete(@id).map {|id| User.new(id) }
-  end
-
-  def connected_albums
-    return @connected_albums if @connected_albums
-
-    albums = Set.new
-
-    photos_of.each_slice(50) do |photos|
-      albums += GRAPH.batch do |batch_api|
-        photos.each do |photo|
-          batch_api.get_object(photo.id + '?fields=album') {|r|
-            r['album']['id'] if r['album']
-          }
+        @pager.raw_response['data'].each do |data|
+          yield Photo.new(@album, data)
         end
       end
     end
-
-    @connected_albums = albums.reject(&:nil?).map {|id| Album.with_id(id) }
   end
 
-  def photos_of
-    return @photos_of if @photos_of
+  class User
+    include Writer
 
-    # Make a dummy album
-    album = Class.new {
-      attr_reader :user
-      def initialize(user, path)
-        @user, @path = user, path
+    @@users = Set.new
+
+    def self.find(id)
+      @@users.find {|user| user.id.to_s == id.to_s } ||
+        User.new(id).tap {|user| @@users << user }
+    end
+
+    def self.me
+      @@me ||= User.new(GRAPH.get_object('me')['id']).tap {|user| @@users << user }
+    end
+
+    attr_reader :id
+
+    def initialize(id)
+      @id = id
+    end
+
+    def path
+      ROOT + 'facebook' + id.to_s
+    end
+
+    def albums
+      @albums ||= Album.for(@id)
+    end
+
+    def connected_people
+      return @connected_people if @connected_people
+
+      people = Set.new
+
+      albums.each do |album|
+        if album.data['comments']
+          people += album.data['comments']['data'].map {|data|
+            data['from']['id']
+          }
+        end
+
+        if album.data['likes']
+          people += album.data['likes']['data'].map {|data|
+            data['id']
+          }
+        end
       end
 
-      def path
-        user.path + @path
+      @connected_people = people.delete(@id).map {|id| User.new(id) }
+    end
+
+    def connected_albums
+      return @connected_albums if @connected_albums
+
+      albums = Set.new
+
+      photos_of.each_slice(50) do |photos|
+        albums += GRAPH.batch do |batch_api|
+          photos.each do |photo|
+            batch_api.get_object(photo.id + '?fields=album') {|r|
+              r['album']['id'] if r['album']
+            }
+          end
+        end
       end
-    }.new(self, 'photos_of')
 
-    photos = GRAPH.get_object(@id + '?fields=photos.limit(200)')
-    return [] unless photos['photos']
+      @connected_albums = albums.reject(&:nil?).map {|id| Album.with_id(id) }
+    end
 
-    @photos_of = PhotoIterator.new(GRAPH, album, photos)
-  end
+    def photos_of
+      return @photos_of if @photos_of
 
-  def data
-    @data ||= GRAPH.get_object(@id)
-  end
+      # Make a dummy album
+      album = Class.new {
+        attr_reader :user
+        def initialize(user, path)
+          @user, @path = user, path
+        end
 
-  writeable :user, 'data.json', :data
+        def path
+          user.path + @path
+        end
+      }.new(self, 'photos_of')
 
-  def name
-    data['name']
-  end
+      photos = GRAPH.get_object(@id + '?fields=photos.limit(200)')
+      return [] unless photos['photos']
 
-  def inspect
-    "#<User #{name}>"
+      @photos_of = PhotoIterator.new(GRAPH, album, photos)
+    end
+
+    def data
+      @data ||= GRAPH.get_object(@id)
+    end
+
+    writeable :user, 'data.json', :data
+
+    def name
+      data['name']
+    end
+
+    def inspect
+      "#<User #{name}>"
+    end
   end
 end
-
 
 class Hall::Facebook
   command :update do
@@ -288,7 +289,7 @@ class Hall::Facebook
       break_on_skip = get(:quick)
       overwrite = {}
 
-      me = User.me
+      me = Update::User.me
 
       puts "Me".bold
       me.write(overwrite)

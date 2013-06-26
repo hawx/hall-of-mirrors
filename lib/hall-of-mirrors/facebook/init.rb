@@ -5,29 +5,30 @@ require 'koala'
 require 'pathname'
 require 'sinatra/base'
 
-OAUTH = Koala::Facebook::OAuth.new(ENV['FACEBOOK_APP_ID'],
-                                ENV['FACEBOOK_APP_SECRET'],
-                                'http://localhost:8080/auth')
+module Hall::Facebook::Init
+  OAUTH = Koala::Facebook::OAuth.new(ENV['FACEBOOK_APP_ID'],
+                                 ENV['FACEBOOK_APP_SECRET'],
+                                 'http://localhost:8080/auth')
 
-class AuthClient < Sinatra::Base
-  get '/' do
-    session[:app_id] = ENV['FACEBOOK_APP_ID']
-    session[:app_secret] = ENV['FACEBOOK_APP_SECRET']
+  class AuthClient < Sinatra::Base
+    get '/' do
+      session[:app_id] = ENV['FACEBOOK_APP_ID']
+      session[:app_secret] = ENV['FACEBOOK_APP_SECRET']
 
-    redirect OAUTH.url_for_oauth_code(:permissions => [
-                                        'user_photos',
-                                        'friends_photos'])
-  end
+      redirect OAUTH.url_for_oauth_code(:permissions => [
+                                          'user_photos',
+                                          'friends_photos'])
+    end
 
-  get '/auth' do
-    code = params['code']
-    token = OAUTH.get_access_token(code)
+    get '/auth' do
+      code = params['code']
+      token = OAUTH.get_access_token(code)
 
-    Config.set :facebook, :token, token
-    "Wrote token, you can now quit!"
+      Config.set :facebook, :token, token
+      "Wrote token, you can now quit!"
+    end
   end
 end
-
 
 class Hall::Facebook
   command :init do
