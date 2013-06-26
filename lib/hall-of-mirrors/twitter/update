@@ -1,0 +1,93 @@
+#!/usr/bin/env ruby
+
+require 'pp'
+require 'twitter'
+require 'clive/output'
+require 'json'
+require 'pathname'
+require 'fileutils'
+
+HERE = Pathname.new(__FILE__) + '..'
+
+class Array
+  def to_h
+    Hash[self]
+  end
+end
+
+class Tweet
+  attr_reader :data
+
+  def initialize(user, data)
+    @user = user
+    @data = data.find_all {|k,v| k != :user }.to_h
+  end
+
+  def to_json(*opts)
+    data.to_json(*opts)
+  end
+end
+
+class User
+  KEYS = [
+    :id, :name, :screen_name, :location, :description, :entities,
+    :followers_count, :friends_count, :created_at, :favourites_count,
+    :time_zone, :utc_offset, :statuses_count, :lang ]
+
+  def initialize(name)
+    @name = name
+  end
+
+  def data
+    @data ||= Twitter.user(@name).to_hash.find_all {|k,v|
+      KEYS.include?(k)
+    }.to_h
+  end
+
+  def tweets
+    return @tweets if @tweets
+    @tweets = []
+
+    got = Twitter.user_timeline(@name, count: 20)
+    @tweets += got
+
+    until got.empty? || @tweets.size > 1
+      puts "Getting another page..."
+      got = Twitter.user_timeline(@name, count: 200, max_id: @tweets.last.id)
+      @tweets += got
+    end
+
+    @tweets = @tweets.map {|t| Tweet.new(self, t.to_hash) }
+  end
+
+  def path
+    HERE + @name
+  end
+
+  def to_json(*opts)
+    data.to_json(*opts)
+  end
+
+  def write(overwrite={})
+    wrote = false
+    print path.to_s.bold.blue
+    FileUtils.mkdir_p(path)
+
+    if !(path + 'data.json').exist? || overwrite[:data]
+      File.write(path + 'data.json', JSON.pretty_generate(self))
+      print "\n  wrote ".grey + "data.json"
+      wrote = true
+    end
+
+    if wrote
+      print "\n\n"
+    else
+      print "\r  skipped ".red + path.to_s.grey + "\n"
+    end
+
+    wrote
+  end
+end
+
+user = User.new('hawx')
+user.write

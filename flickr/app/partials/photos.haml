@@ -1,6 +1,0 @@
-- for photo in photos
-  .photo
-    %a{href: photo.url}
-      %img{src: photo.thumbnail_url}
-    %h4= photo.title
-    %div.meta= partial :meta, locals: {photo: photo}
