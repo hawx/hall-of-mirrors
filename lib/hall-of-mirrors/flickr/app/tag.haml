@@ -1,0 +1,23 @@
+!!!
+%html
+  %head
+    %title= title @user, 'tags', @tag
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a{href: '/'} flickr
+        %span /
+        %a{href: @user.url}= @user.data['username']
+        %span /
+        = partial :menu, locals: {name: 'tags'}
+        %span /
+        %a.here{href: @tag.url}= @tag.name
+
+
+    %section
+      .left= partial :photos, locals: {photos: @photos}
+      .clear
+
+    = partial :nav, locals: {obj: @tag, page: @page}

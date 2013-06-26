@@ -1,0 +1,257 @@
+body
+  font: 13px/1.4 'Lucida Grande', Verdana, sans-serif
+  background: white
+  color: #1e1e1e
+  padding: 0 4em
+  margin: 0
+
+section#main
+  max-width: 500px
+  width: auto
+  padding-bottom: 3em
+
+body > header
+  font-family: HelveticaNeue
+  margin-bottom: 3em
+
+  h1
+    font-weight: normal
+    font-size: 21px
+    display: block
+
+    span
+      color: #bbb
+
+    a:last-child
+      font-weight: bold
+
+article
+  border-bottom: 1px dotted #ececec
+  margin: 5em 0 4em
+  padding-bottom: 1em
+  position: relative
+  width: auto
+
+  &:last-of-type
+    border-bottom: none
+
+  header h1
+    font-size: 1.6em
+    margin: 1em 0
+
+  &.answer
+    .answer, .question h1
+      font: 13px/1.4 'Lucida Grande', Verdana, sans-serif
+      padding: 0
+      margin: 0
+
+    .question h1
+      font-weight: bold
+
+    .answer
+      margin: 0 2em
+
+  &.audio
+    img
+      width: 140px
+      -webkit-border-radius: 2px
+
+    header
+      max-width: 340px
+      width: auto
+      position: absolute
+      top: 0
+      left: 160px
+
+      h1
+        font-weight: normal
+        font-size: 1.1em
+
+      strong
+        display: block
+        font-weight: bold
+        font-size: 1.2em
+
+    .player
+      margin-top: 10px
+
+
+  &.photo
+    img
+      max-width: 100%
+      width: auto
+      display: block
+      margin: 0 auto
+      float: left
+
+      & + img
+        margin-top: 3px
+
+  &.video
+    video
+      max-width: 100%
+      width: auto
+      display: block
+      margin: 0 auto
+      float: left
+
+  &.chat
+    .content
+      list-style: none
+      padding: 0
+
+      li
+        padding: 0.2em 0
+
+        span
+          font-weight: bold
+
+  &.link
+    header h1 a
+      color: #1e1e1e
+      transition: color .2s
+
+      &:hover
+        color: #0a0a0a
+
+      &:before
+        position: absolute
+        margin-left: -30px
+        width: 23px
+        text-align: right
+        content: '→ '
+
+  &.quote
+    blockquote
+      font: italic 1.4em/1.5 Georgia, serif
+      margin: 1em 2em
+      padding: 0
+      font-size: 1.3em
+      line-height: 1.4em
+
+      &:before
+        content: "“"
+        position: absolute
+        margin-left: -0.6em
+        margin-top: 0.1em
+        font-size: 2.5em
+
+    cite
+      margin: 1em 0
+      display: block
+      font-style: normal
+
+#notes ol
+  list-style: none
+  padding: 0 2em
+  font-size: 11px
+  color: #b1b1b1
+
+  a
+    color: #939393
+    font-weight: bold
+
+  blockquote
+    color: #b1b1b1
+    font-weight: normal
+    margin: 0.2em 1em
+    font-style: italic
+
+.meta
+  height: 1.5em
+  font-size: 11px
+
+  a
+    color: #b1b1b1
+    transition: color .3s
+
+    &:hover
+      color: #939393
+      text-decoration: none
+
+  time
+    float: right
+
+nav
+  margin: 1em 0
+  max-width: 500px
+  width: 100%
+  text-align: center
+  color: #b1b1b1
+
+  a
+    margin: 0 .3em
+    text-decoration: none
+    font-weight: bold
+
+    &:hover
+      text-decoration: none
+
+  .prev, .next
+    margin: 0 2em
+
+  .current
+    text-decoration: underline
+
+footer
+  color: #b1b1b1
+  font-size: 11px
+  clear: both
+  padding: 2.8em 0
+
+  a
+    margin: 0 0.1em
+
+    &:hover
+      text-decoration: none
+
+a
+  text-decoration: none
+  color: #7576c2
+  transition: 0.2s color
+
+  &:hover
+    color: #6b6cb8
+    text-decoration: underline
+
+.content, .caption
+  h1, h2, h3
+    margin-top: 1.3em
+
+  h1
+    font-size: 1.4em
+
+  h2
+    font-size: 1.25em
+
+  h3
+    font-size: 1.1em
+
+  blockquote
+    border-left: 0.3em solid #b1b1b1
+
+  p, blockquote, ul, ol
+    margin: 1.4em 0
+
+  blockquote, ul, ol
+    padding: 0 1.4em
+
+  ul, ol
+    ul, ol
+      margin-top: 0
+      margin-bottom: 0
+
+  pre
+    width: auto
+    padding: 0 1.4em
+    max-width: 100%
+
+  code
+    font: 0.9em/1.3em Menlo, "Bitstream Vera Sans Mono", "Lucida Console", monospace
+
+  cite
+    font-style: normal
+
+hr.clear
+  border-color: transparent
+  width: 100%

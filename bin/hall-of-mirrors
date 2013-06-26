@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+
+require 'clive'
+
+require_relative '../lib/hall-of-mirrors/global'
+require_relative '../lib/hall-of-mirrors/writer'
+
+class CLI < Clive
+
+  command :facebook do
+    require_relative '../lib/hall-of-mirrors/facebook/init'
+    require_relative '../lib/hall-of-mirrors/facebook/update'
+    # require_relative '../lib/hall-of-mirrors/facebook/serve'
+
+    Hall::Facebook.run
+  end
+
+  command :flickr do
+    require_relative '../lib/hall-of-mirrors/flickr/init'
+    require_relative '../lib/hall-of-mirrors/flickr/update'
+    require_relative '../lib/hall-of-mirrors/flickr/serve'
+
+    Hall::Flickr.run
+  end
+
+  command :lastfm do
+    require_relative '../lib/hall-of-mirrors/lastfm/init'
+    require_relative '../lib/hall-of-mirrors/lastfm/update'
+    # require_relative '../lib/hall-of-mirrors/lastfm/serve'
+
+    Hall::LastFm.run
+  end
+
+  command :tumblr do
+    require_relative '../lib/hall-of-mirrors/tumblr/init'
+    require_relative '../lib/hall-of-mirrors/tumblr/update'
+    # require_relative '../lib/hall-of-mirrors/tumblr/serve'
+
+    Hall::Tumblr.run
+  end
+
+end
+
+module Hall
+  class Facebook < Clive; end
+  class Flickr < Clive; end
+  class LastFm < Clive; end
+  class Tumblr < Clive; end
+end
+
+CLI.run

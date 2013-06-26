@@ -1,0 +1,35 @@
+!!!
+%html
+  %head
+    %title= title @user, 'sets'
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a{href: '/'} flickr
+        %span /
+        %a{href: @user.url}= @user.data['username']
+        %span /
+        = partial :menu, locals: {name: 'sets', here: true}
+
+    %section
+      .left
+        - for set in @sets
+          .set
+            %a{href: set.url}
+              %img{src: set.photos.first.thumbnail_url}
+              %h1= set.data['title']
+            .meta
+              - start = short_time_from_string set.photos.last.dates['taken']
+              - ended = short_time_from_string set.photos.first.dates['taken']
+
+              - if start == ended
+                %span= start
+
+              - else
+                = start
+                %span to
+                = ended
+
+      .clear

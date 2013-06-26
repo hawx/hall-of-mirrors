@@ -1,13 +1,2 @@
-# First, blacklist everything
-*
-
-# Now whitelist anything that's a directory
-!*/
-
-# And finally whitelist the files
-!update
-!_common/*
-!*/init
-!*/update
-!*/serve
-!*/app/**/*
+_data
+config.yml

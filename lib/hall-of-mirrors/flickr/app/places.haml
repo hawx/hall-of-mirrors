@@ -1,0 +1,20 @@
+!!!
+%html
+  %head
+    %title= title @user, 'places'
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a{href: '/'} flickr
+        %span /
+        %a{href: @user.url}= @user.data['username']
+        %span /
+        = partial :menu, locals: {name: 'places', here: true}
+
+    %ul.places
+      - for place in @places
+        %li
+          %a{href: place.url}= place.data['_content']
+          %span= place.photos.size

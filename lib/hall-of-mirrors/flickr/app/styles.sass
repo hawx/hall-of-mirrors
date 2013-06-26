@@ -1,0 +1,230 @@
+$flickr_blue: #0063dc
+$flickr_pink: #ff0084
+$flickr_grey: #bbbbbb
+
+$black: black
+$grey:  #aaa
+
+
+body
+  background: white
+  color: black
+  font-family: 'Helvetica Neue', Helvetica, 'Lucida Grande', sans-serif
+  font-size: 14px
+  padding: 2em
+  line-height: 18px
+
+h1
+  margin: 2em 0
+  font-size: 26px
+  font-weight: normal
+  position: relative
+
+  a
+    color: #000
+    text-decoration: none
+
+    &.here
+      font-weight: bold
+
+  span
+    color: #bbb
+
+  .menu
+    display: inline-block
+    position: relative
+
+    a
+      display: block
+      position: relative
+
+    a:not(.first), span
+      display: none
+
+    &:hover
+      a:not(.first), span
+        display: inline-table
+        float: left
+        clear: both
+        margin-top: 14px
+
+
+
+$left-width:  700px
+$right-width: 200px
+$gutter:      40px
+
+.clear
+  clear: both
+
+.padding
+  height: 5em
+
+section
+  width: $left-width + $gutter + $right-width
+  position: relative
+
+  .left
+    width: $left-width
+    float: left
+
+  .right
+    width: $right-width
+    float: right
+
+  .clear
+    clear: both
+
+
+.photo
+  margin: 3em 0
+
+  &:first-of-type
+    margin-top: 0
+
+  h4
+    font-size: 14px
+    margin: 5px 0 0
+
+  .meta
+    font-size: 12px
+    color: $grey
+    margin: 0
+    margin-top: .5em
+    line-height: 12px
+
+  p
+    margin: 5px 0 2px
+
+  a
+    color: $grey
+    text-decoration: none
+
+.photo.display
+  width: $left-width
+
+.right
+  *:first-child
+    margin-top: 0
+
+  > h2
+    font-weight: normal
+    font-size: 22px
+    text-align: center
+
+  #map
+    width: $right-width
+    height: 140px
+    background: #eee
+    margin-bottom: 12px
+
+    &:before
+      content: 'no map'
+      width: $right-width
+      margin-top: 60px
+      text-align: center
+      display: inline-block
+      color: #ccc
+      text-shadow: 0 -1px 0 #f5f5f5
+
+  .prev, .next
+    width: $right-width
+    display: block
+    margin-bottom: 2px
+
+    img
+      max-width: 100%
+      max-height: 100%
+
+.set
+  margin-bottom: 80px
+
+  a
+    text-decoration: none
+
+  img
+    width: 100%
+
+  h1
+    text-align: center
+    margin: 1em 0
+    font-size: 20px
+    font-weight: normal
+    color: black
+
+  .meta
+    color: $grey
+    text-align: center
+
+
+.photo
+  $label-width: 50px
+
+  ul
+    margin-top: 16px
+    list-style: none
+    padding: 0
+    padding-left: $label-width
+
+    &:before
+      margin-top: 1px
+      line-height: 18px
+      position: absolute
+      margin-left: -$label-width
+      content: 'LABEL'
+      font-size: 11px
+      font-weight: bold
+      color: $flickr_pink
+
+    a
+      color: $black
+
+    li
+      float: left
+
+      &:after
+        margin: 0 .8em 0 .6em
+        content: '•'
+        color: #bbb
+
+      &:last-of-type:after
+        content: ''
+
+
+  .description
+    margin-top: 1.5em
+    color: $black
+    border-left: 2px solid $grey
+    padding-left: $label-width / 2 - 2
+    font: italic 18px/1.4 Palatino, Georgia, serif
+
+    a
+      color: $flickr_blue
+      text-decoration: underline
+
+
+.photo .tags:before
+  content: 'TAGS'
+
+.photo .exif:before
+  content: 'EXIF'
+
+.nav
+  a
+    padding: 2px 6px
+    color: $black
+    text-decoration: none
+
+  .this-page
+    font-weight: bold
+    color: $flickr_pink
+    padding: 2px 6px
+
+  .prev
+    margin-right: 20px
+
+  .next
+    margin-left: 20px
+
+  .disabled
+    color: $grey

@@ -1,0 +1,33 @@
+!!!
+%html
+  %head
+    %title= title @user, 'faves'
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a{href: '/'} flickr
+        %span /
+        %a{href: @user.url}= @user.data['username']
+        %span /
+        = partial :menu, locals: {name: 'faves', here: true}
+
+    %section
+      .left
+        - for photo in @photos
+          .photo
+            %a{href: photo.url}
+              %img{src: photo.thumbnail_url}
+            %h4= photo.title
+            %div.meta
+              - time = Time.at(photo.extended_data['date_faved'].to_i)
+              - hour = time.descriptive_hour
+              - day  = time.strftime("%A %B %-d") + time.ordinal + time.strftime(" %Y")
+
+              %span faved on
+              %time{datetime: time.strftime("%FT%T%:z")} #{day}, #{hour}
+
+      .clear
+
+    = partial :nav, locals: {obj: @faves, page: @page}

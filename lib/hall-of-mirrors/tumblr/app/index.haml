@@ -1,0 +1,17 @@
+!!!
+%html
+  %head
+    %title tumblr
+    %link{rel: 'stylesheet', href: '/styles.css'}
+
+  %body
+
+    %header
+      %h1
+        %a{href: '/'} tumblr
+
+    %section#main
+      %ul
+      - for user in @users
+        %li
+          %a{href: user.url}= user.name

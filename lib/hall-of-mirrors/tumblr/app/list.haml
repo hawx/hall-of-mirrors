@@ -1,0 +1,165 @@
+!!!
+%html
+  %head
+    %title tumblr / #{@user.name}
+    %link{rel: 'stylesheet', href: '/styles.css'}
+
+  %body
+
+    %header
+      %h1
+        %a{href: '/'} tumblr
+        %span /
+        %a{href: @user.url}= @user.name
+
+
+    %section#main
+
+      - for post in @posts
+        %article{class: post.type}
+          - case post.type
+
+          - when 'text'
+            - if post.title
+              %header
+                %h1= post.title
+
+            .content= post.fix_resources post.body
+
+
+          - when 'photo'
+            - for url in post.image_urls
+              - if post.image_permalink?
+                %a{href: post.image_permalink}
+                  %img{src: url}
+              - else
+                %img{src: url}
+
+            %hr.clear
+
+            - if post.caption?
+              .caption= post.caption
+
+
+          - when 'video'
+            - if post.permalink_url?
+              %video{controls: 'controls', src: post.resource_path(post.permalink_url)}
+            - elsif post.video_url?
+              %video{controls: 'controls', src: post.resource_path(post.video_url)}
+            - else
+              .video-container= post.player.last['embed_code']
+
+            %hr.clear
+
+            - if post.caption?
+              .caption= post.caption
+
+
+          - when 'audio'
+            - if post.data['album_art']
+              .artwork
+                %img{src: post.data['album_art']}
+
+            %header
+              %h1
+                - if post.data['track_name']
+                  %strong= post.data['track_name']
+                - if post.data['artist']
+                  %span= post.data['artist']
+
+              %audio.player{controls: 'controls', src: post.audio_path(post.audio_url) + '.mp3'}
+                %p Your browser does not support the audio element.
+
+            - if post.caption?
+              .caption= post.caption
+
+
+          - when 'quote'
+            %blockquote= post.fix_resources post.text
+            - if post.source
+              %cite= post.fix_resources post.source
+
+
+          - when 'chat'
+            - if post.title
+              %header
+                %h1= post.title
+
+            %ul.content
+              - for line in post.dialogue
+                %li
+                  %span{class: post.name}= line['label']
+                  = line['phrase']
+
+
+          - when 'link'
+            %header
+              %h1
+                %a{href: post.url}= post.title
+
+            - if post.description?
+              .content= post.fix_resources post.description
+
+          - when 'answer'
+            %header.question
+              %h1
+                %span.name
+                  %a{href: post.asking_url}= post.asking_name
+                  asks:
+                = post.question
+
+            %blockquote.answer= post.answer
+
+          .meta
+            %a.permalink{href: post.url}
+              %time= format_time post.date
+
+            - if post.data['note_count']
+              - if post.note_count == 1
+                %a.notes{href: post.url}= post.note_count.to_s + ' note'
+              - elsif post.note_count > 1
+                %a.notes{href: post.url}= post.note_count.to_s + ' notes'
+
+            - if post.reblogged_from_name?
+              %span reblogged from
+              %a{href: post.reblogged_root_url}= post.reblogged_from_name
+
+            - if post.source_url?
+              %span via
+              %a{href: post.source_url}= post.source_title
+
+      - if @post && post.notes?
+        %section#notes
+          %ol.notes
+            - for note in post.notes
+              %li
+                %a{href: note['blog_url']}= note['blog_name']
+                - if note['type'] == 'posted'
+                  %span posted this
+                - elsif note['type'] == 'like'
+                  %span likes this
+                - else
+                  %span reblogged this
+                  - if note['added_text']
+                    %span and added:
+                    %blockquote= note['added_text']
+
+      - unless @post || @user.pages == 1
+        %nav
+          - if @page > 0
+            %a.prev{href: @user.url + "/page/#{@page - 1}"} Newer
+          - else
+            %span.prev Newer
+
+          - for page in @user.range
+            - if page == @page
+              %a.current{href: @user.url + "/page/#{page}"}= page
+            - elsif page
+              %a{href: @user.url + "/page/#{page}"}= page
+            - else
+              %span &hellip;
+
+          - if @page < @user.pages - 1
+            %a.next{href: @user.url + "/page/#{@page + 1}"} Older
+          - else
+            %span.next Older

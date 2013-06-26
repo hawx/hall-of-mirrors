@@ -1,0 +1,24 @@
+!!!
+%html
+  %head
+    %title= title @user, 'tags'
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a{href: '/'} flickr
+        %span /
+        %a{href: @user.url}= @user.data['username']
+        %span /
+        = partial :menu, locals: {name: 'tags', here: true}
+
+    %section
+      .left
+        %ul.tags
+          - for tag in @tags.sort_by {|t| -t.photos.size }
+            %li
+              %a{href: tag.url}= tag.name
+              %span= tag.photos.size
+
+      .clear

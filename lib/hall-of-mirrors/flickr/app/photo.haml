@@ -1,0 +1,84 @@
+!!!
+%html
+  %head
+    %title= title @user, @photo
+    %link{:rel => 'stylesheet', :href => '/styles.css'}
+
+  %body
+    %header
+      %h1
+        %a{href: '/'} flickr
+        %span /
+        %a{href: @user.url}= @user.data['username']
+        %span /
+        = partial :menu, locals: {name: 'photos'}
+        %span /
+        - unless @photo.title.empty?
+          %a.here{href: @photo.url}= @photo.title
+        - else
+          %span __________
+
+    %section
+      .left
+        .photo.display
+          %a{href: @photo.original_url}
+            %img{src: @photo.thumbnail_url}
+
+          %div.meta= partial :meta, locals: {photo: @photo}
+
+          - unless @photo.tags.empty?
+            %ul.tags
+              - for tag in @photo.tags['tag']
+                %li
+                  %a{href: @user.url + "/tags/" + tag['_content']}= tag['raw']
+              .clear
+
+          - unless !@photo.exif['camera'] || @photo.exif['camera'].empty?
+            %ul.exif
+              %li
+                - cam_url = @photo.exif['camera'].downcase.gsub(' ', '-')
+                %a{href: @user.url + '/cameras/' + cam_url}= @photo.exif['camera']
+
+              - if @photo.has_exif?('Aperture')
+                %li= @photo.get_exif('Aperture')['clean']
+
+              - if @photo.has_exif?('Exposure')
+                %li= @photo.get_exif('Exposure')['raw']
+
+              - if @photo.has_exif?('ISO')
+                %li ISO #{@photo.get_exif('ISO')['raw']}
+
+              - if @photo.has_exif?('FocalLength')
+                %li= @photo.get_exif('FocalLength')['raw']
+              .clear
+
+          %p.description= @photo.description
+
+      .right
+        #map
+
+        - if @photo.prev
+          %a.prev{href: @photo.prev.url}
+            %img{src: @photo.prev.thumbnail_url}
+
+        - if @photo.next
+          %a.next{href: @photo.next.url}
+            %img{src: @photo.next.thumbnail_url}
+
+      .clear.padding
+
+
+    - if @photo.data['location']
+      %script{src: '/app/modestmaps.min.js'}
+      :javascript
+        function init() {
+          var template = 'http://c.tiles.mapbox.com/v3/examples.map-szwdot65/{Z}/{X}/{Y}.png';
+          var provider = new MM.TemplatedLayer(template);
+          var map = new MM.Map('map', provider, null, null);
+          map.setZoom(13).setCenter({
+            lat: #{@photo.location['latitude']},
+            lon: #{@photo.location['longitude']}
+          });
+        }
+
+        window.onload = init
