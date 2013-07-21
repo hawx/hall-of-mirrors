@@ -34,7 +34,7 @@ class CLI < Clive
   command :tumblr do
     require_relative '../lib/hall-of-mirrors/tumblr/init'
     require_relative '../lib/hall-of-mirrors/tumblr/update'
-    # require_relative '../lib/hall-of-mirrors/tumblr/serve'
+    require_relative '../lib/hall-of-mirrors/tumblr/serve'
 
     Hall::Tumblr.run
   end
