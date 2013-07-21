@@ -10,9 +10,7 @@ require 'seq/pager'
 require 'launchy'
 
 class Hall::Flickr::Serve < Sinatra::Base
-
   PAGE_SIZE = 10
-
 
   # Requires #photos method to be defined
   module Pageable

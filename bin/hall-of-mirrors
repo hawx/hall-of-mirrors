@@ -24,11 +24,11 @@ class CLI < Clive
   end
 
   command :lastfm do
-    require_relative '../lib/hall-of-mirrors/lastfm/init'
-    require_relative '../lib/hall-of-mirrors/lastfm/update'
-    # require_relative '../lib/hall-of-mirrors/lastfm/serve'
+    require_relative '../lib/hall-of-mirrors/last.fm/init'
+    # require_relative '../lib/hall-of-mirrors/last.fm/update'
+    # require_relative '../lib/hall-of-mirrors/last.fm/serve'
 
-    Hall::LastFm.run
+    Hall::Lastfm.run
   end
 
   command :tumblr do
@@ -44,7 +44,7 @@ end
 module Hall
   class Facebook < Clive; end
   class Flickr < Clive; end
-  class LastFm < Clive; end
+  class Lastfm < Clive; end
   class Tumblr < Clive; end
 end
 

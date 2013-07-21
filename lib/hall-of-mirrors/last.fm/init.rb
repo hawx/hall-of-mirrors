@@ -1,24 +1,34 @@
 #!/usr/bin/env ruby
 
 require 'lastfm'
-require 'pathname'
 
-HERE = Pathname.new(__FILE__) + '..'
+class Hall::Lastfm
+  module Init
+    extend self
 
-def authenticate
-  key    = ENV['LASTFM_KEY']
-  secret = ENV['LASTFM_SECRET']
+    def authenticate
+      key    = ENV['LASTFM_KEY']
+      secret = ENV['LASTFM_SECRET']
 
-  lastfm = Lastfm.new(key, secret)
-  token  = lastfm.auth.get_token
+      lastfm = Lastfm.new(key, secret)
+      token  = lastfm.auth.get_token
 
-  puts "Visit http://www.last.fm/api/auth/?api_key=#{key}&token=#{token} and grant me permissions! Press enter when done."
-  done = gets
+      puts "Visit http://www.last.fm/api/auth/?api_key=#{key}&token=#{token} and grant me permissions! Press enter when done."
+      done = $stdin.gets
 
-  session = lastfm.auth.get_session(:token => token)
-  lastfm.session = session['key']
+      session = lastfm.auth.get_session(:token => token)
+      lastfm.session = session['key']
 
-  File.write(HERE + '_auth', session['key'])
+      Config.set :lastfm, :session, session['key']
+    end
+  end
+
+  command :init do
+    if Config.has?(:lastfm, :session)
+      puts "You are already authenticated."
+      exit
+    end
+
+    Init.authenticate
+  end
 end
-
-authenticate unless (HERE + '_auth').exist?

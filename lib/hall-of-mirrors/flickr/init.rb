@@ -1,7 +1,9 @@
 require 'flickraw'
 
-module Hall::Flickr::Init
-  module Helper extend self
+class Hall::Flickr
+  module Init
+    extend self
+
     # Runs the standard authenticartion flow. This involves printing a url and
     # waiting for the number given by it. When we have the tokens, we save them to
     # a local file so that they can be read, which saves having to authenticate
@@ -49,14 +51,12 @@ module Hall::Flickr::Init
       false
     end
   end
-end
 
-class Hall::Flickr
   command :init do
     FlickRaw.api_key = ENV['FLICKR_KEY']
     FlickRaw.shared_secret = ENV['FLICKR_SECRET']
 
-    Init::Helper.authenticate
-    Init::Helper.test_login
+    Init.authenticate
+    Init.test_login
   end
 end
