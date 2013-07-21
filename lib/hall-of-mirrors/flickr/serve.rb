@@ -102,6 +102,10 @@ class Hall::Flickr::Serve < Sinatra::Base
       '/' + path.relative_path_from(ROOT + 'flickr').to_s + '/photo_z.jpg'
     end
 
+    def description
+      data['description'].gsub("\n", "<br/>")
+    end
+
     def data
       @data ||= JSON.parse File.read(path + 'data.json')
     end
