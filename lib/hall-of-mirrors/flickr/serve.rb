@@ -439,23 +439,23 @@ class Hall::Flickr::Serve < Sinatra::Base
 
       countries = @places.find_all {|_,v| v.parent.nil? }
       countries.each do |_, country|
-        country_node = Tree::TreeNode.new(country.name, country)
+        country_node = Tree::TreeNode.new(country.id, country)
 
         regions = @places.find_all {|_,v| v.parent == country }
         regions.each do |_, region|
-          region_node = Tree::TreeNode.new(region.name, region)
+          region_node = Tree::TreeNode.new(region.id, region)
 
           counties = @places.find_all {|_,v| v.parent == region }
           counties.each do |_, county|
-            county_node = Tree::TreeNode.new(county.name, county)
+            county_node = Tree::TreeNode.new(county.id, county)
 
             localities = @places.find_all {|_,v| v.parent == county }
             localities.each do |_, locality|
-              locality_node = Tree::TreeNode.new(locality.name, locality)
+              locality_node = Tree::TreeNode.new(locality.id, locality)
 
               neighbourhoods = @places.find_all {|_,v| v.parent == locality }
               neighbourhoods.each do |_, neighbourhood|
-                neighbourhood_node = Tree::TreeNode.new(neighbourhood.name, neighbourhood)
+                neighbourhood_node = Tree::TreeNode.new(neighbourhood.id, neighbourhood)
 
                 locality_node << neighbourhood_node
               end
@@ -476,7 +476,7 @@ class Hall::Flickr::Serve < Sinatra::Base
     end
 
     def place(woeid)
-      places.find {|pl| pl.id == woeid }
+      places.find {|pl| pl.name == woeid }.content
     end
 
     def inspect
