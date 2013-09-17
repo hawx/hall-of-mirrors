@@ -8,6 +8,7 @@ require 'maruku'
 require 'sinatra/base'
 require 'seq/pager'
 require 'launchy'
+require 'tree'
 
 class Hall::Flickr::Serve < Sinatra::Base
   PAGE_SIZE = 10
@@ -119,7 +120,11 @@ class Hall::Flickr::Serve < Sinatra::Base
     end
 
     def get_exif(name)
-      exif['exif'].find {|t| t['label'] == name || t['tag'] == name }
+      return unless exif['exif']
+
+      exif['exif'].find {|t|
+        t['label'] == name || t['tag'] == name
+      }
     end
 
     def inspect
@@ -237,14 +242,17 @@ class Hall::Flickr::Serve < Sinatra::Base
   end
 
   class Place
+    LEVELS = %w(country region county locality neighbourhood)
     include Pageable
 
-    attr_reader :data
+    attr_reader :parent, :level, :data
 
-    def initialize(user, data)
-      @user = user
-      @data = data
-      @ids  = []
+    def initialize(user, level, data, parent=nil)
+      @parent = parent
+      @user   = user
+      @data   = data
+      @level  = level
+      @ids    = []
     end
 
     def << photo
@@ -373,6 +381,9 @@ class Hall::Flickr::Serve < Sinatra::Base
 
       @tags = Hash.new([])
       photos.each do |photo|
+        next unless photo.data.has_key?('tags')
+        next unless photo.data['tags'].has_key?('tag')
+
         photo.data['tags']['tag'].each do |tag|
           @tags[tag['_content']] += [photo.id]
         end
@@ -409,20 +420,59 @@ class Hall::Flickr::Serve < Sinatra::Base
       return @places if @places
 
       @places = {}
-      levels = %w(neighbourhood locality county region country)
+      levels = Place::LEVELS
 
       photos.each do |photo|
         next unless loc = photo.data['location']
 
+        parent = nil
         levels.each do |level|
           next unless data = loc[level]
 
-          @places[data['woeid']] ||= Place.new(self, data)
+          @places[data['woeid']] ||= Place.new(self, level, data, parent)
           @places[data['woeid']] << photo
+          parent = @places[data['woeid']]
         end
       end
 
-      @places = @places.map {|_,v| v }
+      root_node = Tree::TreeNode.new("root")
+
+      countries = @places.find_all {|_,v| v.parent.nil? }
+      countries.each do |_, country|
+        country_node = Tree::TreeNode.new(country.name, country)
+
+        regions = @places.find_all {|_,v| v.parent == country }
+        regions.each do |_, region|
+          region_node = Tree::TreeNode.new(region.name, region)
+
+          counties = @places.find_all {|_,v| v.parent == region }
+          counties.each do |_, county|
+            county_node = Tree::TreeNode.new(county.name, county)
+
+            localities = @places.find_all {|_,v| v.parent == county }
+            localities.each do |_, locality|
+              locality_node = Tree::TreeNode.new(locality.name, locality)
+
+              neighbourhoods = @places.find_all {|_,v| v.parent == locality }
+              neighbourhoods.each do |_, neighbourhood|
+                neighbourhood_node = Tree::TreeNode.new(neighbourhood.name, neighbourhood)
+
+                locality_node << neighbourhood_node
+              end
+
+              county_node << locality_node
+            end
+
+            region_node << county_node
+          end
+
+          country_node << region_node
+        end
+
+        root_node << country_node
+      end
+
+      @places = root_node
     end
 
     def place(woeid)

@@ -26,7 +26,7 @@
 
           %div.meta= partial :meta, locals: {photo: @photo}
 
-          - unless @photo.tags.empty?
+          - unless @photo.tags['tag'].empty?
             %ul.tags
               - for tag in @photo.tags['tag']
                 %li

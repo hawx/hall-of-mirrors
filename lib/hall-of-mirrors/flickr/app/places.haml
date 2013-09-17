@@ -14,7 +14,31 @@
         = partial :menu, locals: {name: 'places', here: true}
 
     %ul.places
-      - for place in @places
+      - for country in @places.children
         %li
-          %a{href: place.url}= place.data['_content']
-          %span= place.photos.size
+          %a{href: country.content.url}= country.content.name
+          %span= country.content.photos.size
+
+          %ul
+            - for region in country.children
+              %li
+                %a{href: region.content.url}= region.content.name
+                %span= region.content.photos.size
+
+                %ul
+                  - for county in region.children
+                    %li
+                      %a{href: county.content.url}= county.content.name
+                      %span= county.content.photos.size
+
+                      %ul
+                        - for locality in county.children
+                          %li
+                            %a{href: locality.content.url}= locality.content.name
+                            %span= locality.content.photos.size
+
+                            %ul
+                              - for neighbourhood in locality.children
+                                %li
+                                  %a{href: neighbourhood.content.url}= neighbourhood.content.name
+                                  %span= neighbourhood.content.photos.size
