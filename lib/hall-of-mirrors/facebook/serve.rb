@@ -26,8 +26,12 @@ class Hall::Facebook::Serve < Sinatra::Base
       JSON.parse File.read(@dir + '/data.json')
     end
 
+    def rel_dir
+      Pathname.new(@dir).relative_path_from(ROOT).to_s
+    end
+
     def path
-      '/' + @dir.split('/')[1..-1].join('/')
+      '/' + rel_dir.split('/')[1..-1].join('/')
     end
 
     def thumb
@@ -48,6 +52,10 @@ class Hall::Facebook::Serve < Sinatra::Base
       @dir = Pathname.new(dir)
     end
 
+    def rel_dir
+      @dir.relative_path_from(ROOT).to_s
+    end
+
     def data
       return {} unless (@dir + 'data.json').exist?
       JSON.parse File.read(@dir + 'data.json')
@@ -64,7 +72,7 @@ class Hall::Facebook::Serve < Sinatra::Base
     end
 
     def url
-      '/' + @dir.to_s.split('/')[1..-1].join('/')
+      '/' + rel_dir.to_s.split('/')[1..-1].join('/')
     end
 
     def find(photo_id)
@@ -180,6 +188,15 @@ class Hall::Facebook::Serve < Sinatra::Base
     return "404 photo not found" if @photo.nil?
 
     haml :photo
+  end
+
+
+  get '/:id/photos_of/:photo/:name.:ext' do
+    send_file File.join(ROOT, 'facebook', params[:id], 'photos_of', params[:photo], params[:name] + '.' + params[:ext])
+  end
+
+  get '/:id/photos/:album/:photo/:name.:ext' do
+    send_file File.join(ROOT, 'facebook', params[:id], 'photos', params[:album], params[:photo], params[:name] + '.' + params[:ext])
   end
 end
 
