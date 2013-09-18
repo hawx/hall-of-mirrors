@@ -43,7 +43,7 @@ class Hall::Facebook
         :bind => 'localhost'
       }
 
-      AuthClient.run!(sinatra_opts) do |server|
+      Init::AuthClient.run!(sinatra_opts) do |server|
         ::Launchy.open("http://#{sinatra_opts[:bind]}:#{sinatra_opts[:port]}/")
       end
     end

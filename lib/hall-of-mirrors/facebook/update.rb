@@ -284,7 +284,7 @@ class Hall::Facebook
 
       token = Config.get(:facebook, :token)
 
-      GRAPH = Koala::Facebook::API.new(token)
+      ::GRAPH = Koala::Facebook::API.new(token)
 
       break_on_skip = get(:quick)
       overwrite = {}
